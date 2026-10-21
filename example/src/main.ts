@@ -19,7 +19,7 @@ const logsButton = requireElement('logs-button', HTMLButtonElement);
 const loader = createHyperAxisWasmLoader({
   importModule: () => import('@cryptokango/hyper-axis/wasm'),
 });
-const client = await HyperAxisClient.initialize(loader);
+const client = await initializeClient();
 let socket: WebSocket | undefined;
 
 client.configureLogging({ enabled: true, level: 'info', capacity: 200 });
@@ -38,6 +38,17 @@ websocketButton.addEventListener('click', handleWebSocketToggle);
 orderButton.addEventListener('click', handlePrepareOrder);
 logsButton.addEventListener('click', handleReadLogs);
 window.addEventListener('beforeunload', closeWebSocket);
+
+async function initializeClient(): Promise<HyperAxisClient> {
+  try {
+    return await HyperAxisClient.initialize(loader);
+  } catch (error: unknown) {
+    status.textContent = 'WASM 初始化失败';
+    statusDot.classList.add('error');
+    writeError('初始化失败', error);
+    throw error;
+  }
+}
 
 function handleNormalizeDecimal(): void {
   runSafely('Decimal 规范化', () => {

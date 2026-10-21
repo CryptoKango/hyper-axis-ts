@@ -20,5 +20,5 @@
       "@cryptokango/hyper-axis/wasm": ["../wasm/hyper_axis.d.ts"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "vite.config.ts"]
 }

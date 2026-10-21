@@ -100,6 +100,11 @@ h1 {
   box-shadow: 0 0 16px #37d5a2;
 }
 
+.status-dot.error {
+  background: #ff637e;
+  box-shadow: 0 0 16px #ff637e;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
