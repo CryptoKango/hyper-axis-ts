@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="HyperAxis TypeScript SDK 浏览器接入示例"
+    />
+    <title>HyperAxis TypeScript Example</title>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">RUST CORE · TYPESCRIPT SDK · WEBASSEMBLY</p>
+        <h1>HyperAxis 浏览器示例</h1>
+        <p class="subtitle">
+          示例展示 WASM 初始化、精度处理、Info API、WebSocket 与限价单预处理。
+          不保存私钥，也不会提交订单。
+        </p>
+        <div class="status-row">
+          <span id="status-dot" class="status-dot"></span>
+          <span id="status">正在初始化 WASM…</span>
+        </div>
+      </header>
+
+      <section class="actions" aria-label="SDK 示例操作">
+        <button id="decimal-button" type="button" disabled>Decimal 精度</button>
+        <button id="info-button" type="button" disabled>请求 allMids</button>
+        <button id="ws-button" type="button" disabled>连接 WebSocket</button>
+        <button id="order-button" type="button" disabled>预处理测试订单</button>
+        <button id="logs-button" type="button" disabled>读取 SDK 日志</button>
+      </section>
+
+      <section class="console" aria-live="polite">
+        <div class="console-title">
+          <span>运行结果</span>
+          <span id="protocol-version">protocol: --</span>
+        </div>
+        <pre id="output">等待 SDK 初始化…</pre>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

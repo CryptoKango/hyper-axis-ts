@@ -1,0 +1,208 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import { HyperAxisClient, HyperAxisError } from '../src/index.js';
+import type { HyperAxisWasmBindings } from '../src/wasm/bindings.js';
+import { createFakeBindings, preparedActionJson } from './fakes.js';
+
+describe('HyperAxisClient initialization', () => {
+  it('deduplicates concurrent initialization for the same loader', async () => {
+    const bindings = createFakeBindings();
+    const loader = vi.fn((): Promise<HyperAxisWasmBindings> => Promise.resolve(bindings));
+
+    const [first, second] = await Promise.all([
+      HyperAxisClient.initialize(loader),
+      HyperAxisClient.initialize(loader),
+    ]);
+
+    expect(first).toBe(second);
+    expect(first.protocolVersion).toBe('0.1.0');
+    expect(loader).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects an incompatible Rust protocol version', async () => {
+    const bindings = createFakeBindings({ protocol_version: () => '0.2.0' });
+
+    await expect(
+      HyperAxisClient.initialize(() => Promise.resolve(bindings)),
+    ).rejects.toMatchObject({
+      code: 'incompatibleVersion',
+      operation: 'protocolVersion',
+    });
+  });
+});
+
+describe('HyperAxisClient order flow', () => {
+  it('passes exact values to Rust and preserves opaque prepared JSON', async () => {
+    const prepare = vi.fn(() => preparedActionJson);
+    const bindings = createFakeBindings({ prepare_limit_order_json: prepare });
+    const client = await HyperAxisClient.initialize(() => Promise.resolve(bindings));
+
+    const prepared = client.prepareLimitOrder({
+      network: 'mainnet',
+      asset: 0,
+      marketKind: 'perp',
+      sizeDecimals: 5,
+      side: 'buy',
+      limitPrice: '3500.2500',
+      size: '0.01000',
+      nonce: '1700000000000',
+    });
+
+    expect(prepare).toHaveBeenCalledWith(
+      'mainnet',
+      0,
+      'perp',
+      5,
+      'buy',
+      '3500.2500',
+      '0.01000',
+      false,
+      'Gtc',
+      '1700000000000',
+      null,
+      null,
+    );
+    expect(prepared.opaqueJson).toBe(preparedActionJson);
+    expect(prepared.signingDigestHex).toHaveLength(66);
+  });
+
+  it('passes opaque Rust JSON unchanged into finalization', async () => {
+    const finalize = vi.fn(() =>
+      JSON.stringify({
+        endpoint: 'https://api.hyperliquid.xyz/exchange',
+        requestJson: '{}',
+        recoveredSigner: '0x0000000000000000000000000000000000000001',
+      }),
+    );
+    const bindings = createFakeBindings({ finalize_order_json: finalize });
+    const client = await HyperAxisClient.initialize(() => Promise.resolve(bindings));
+    const prepared = client.prepareLimitOrder({
+      network: 'mainnet',
+      asset: 0,
+      marketKind: 'perp',
+      sizeDecimals: 5,
+      side: 'buy',
+      limitPrice: '1',
+      size: '1',
+      nonce: '1700000000000',
+    });
+
+    const finalized = client.finalizeOrder({
+      prepared,
+      signature: { r: '0x01', s: '0x02', v: 27 },
+      expectedSigner: '0x0000000000000000000000000000000000000001',
+    });
+
+    expect(finalize).toHaveBeenCalledWith(
+      preparedActionJson,
+      '0x01',
+      '0x02',
+      27,
+      '0x0000000000000000000000000000000000000001',
+    );
+    expect(finalized.opaqueJson).toContain('recoveredSigner');
+  });
+
+  it('rejects values that would be truncated at the WASM u32 boundary', async () => {
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(createFakeBindings()),
+    );
+
+    expect(() =>
+      client.prepareLimitOrder({
+        network: 'mainnet',
+        asset: 4_294_967_296,
+        marketKind: 'perp',
+        sizeDecimals: 5,
+        side: 'buy',
+        limitPrice: '1',
+        size: '1',
+        nonce: '1',
+      }),
+    ).toThrow(HyperAxisError);
+  });
+});
+
+describe('HyperAxisClient runtime and transport', () => {
+  it('manages nonce lifecycle and prevents use after disposal', async () => {
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(createFakeBindings()),
+    );
+    const manager = client.createNonceManager('9');
+
+    expect(manager.next('10')).toBe('10');
+    manager.fastForward('11');
+    expect(manager.lastIssued).toBe('11');
+    manager.dispose();
+    manager.dispose();
+    expect(() => manager.next('12')).toThrow(HyperAxisError);
+  });
+
+  it('serializes typed info queries before crossing the WASM boundary', async () => {
+    const build = vi.fn(() =>
+      JSON.stringify({
+        kind: 'info',
+        method: 'POST',
+        url: 'https://api.hyperliquid.xyz/info',
+        headers: { 'content-type': 'application/json' },
+        body: '{"type":"allMids"}',
+      }),
+    );
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(
+        createFakeBindings({ build_typed_info_http_request_json: build }),
+      ),
+    );
+
+    const request = client.buildTypedInfoHttpRequest('mainnet', {
+      type: 'allMids',
+      dex: '',
+    });
+
+    expect(build).toHaveBeenCalledWith(
+      'mainnet',
+      JSON.stringify({ type: 'allMids', dex: '' }),
+    );
+    expect(request.kind).toBe('info');
+    expect(Object.isFrozen(request.headers)).toBe(true);
+  });
+
+  it('validates host-side integer boundaries before invoking Rust', async () => {
+    const parse = vi.fn(() => '{}');
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(createFakeBindings({ parse_http_response_json: parse })),
+    );
+
+    expect(() => client.parseHttpResponse('info', 65_536, '{}')).toThrow(
+      HyperAxisError,
+    );
+    expect(parse).not.toHaveBeenCalled();
+  });
+
+  it('decodes logging records into immutable snapshots', async () => {
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(
+        createFakeBindings({
+          snapshot_logs_json: () =>
+            JSON.stringify({
+              dropped: '2',
+              records: [
+                {
+                  sequence: '3',
+                  timestampMs: '1700000000000',
+                  level: 'info',
+                  target: 'order',
+                  message: 'prepared',
+                },
+              ],
+            }),
+        }),
+      ),
+    );
+
+    const batch = client.snapshotLogs();
+    expect(batch.dropped).toBe('2');
+    expect(batch.records[0]?.message).toBe('prepared');
+    expect(Object.isFrozen(batch.records)).toBe(true);
+  });
+});

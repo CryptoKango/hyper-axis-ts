@@ -1,0 +1,61 @@
+{
+  "name": "@cryptokango/hyper-axis",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the HyperAxis Rust WebAssembly core",
+  "type": "module",
+  "sideEffects": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CryptoKango/hyper-axis-ts.git"
+  },
+  "homepage": "https://github.com/CryptoKango/hyper-axis-ts#readme",
+  "bugs": {
+    "url": "https://github.com/CryptoKango/hyper-axis-ts/issues"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "files": [
+    "dist",
+    "wasm",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./wasm": {
+      "types": "./wasm/hyper_axis.d.ts",
+      "import": "./wasm/hyper_axis.js"
+    }
+  },
+  "scripts": {
+    "clean": "node ./tool/clean.mjs",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:example": "tsc -p example/tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "test:wasm": "node ./tool/smoke-wasm.mjs",
+    "check": "npm run typecheck && npm run typecheck:example && npm run lint && npm run test && npm run build",
+    "build:wasm": "./tool/build-wasm.sh",
+    "prepare": "npm run build",
+    "prepack": "npm run build && node ./tool/verify-package.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.5",
+    "eslint": "10.13.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0",
+    "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "@cryptokango/hyper-axis": "github:CryptoKango/hyper-axis-ts#master"
+  }
+}
