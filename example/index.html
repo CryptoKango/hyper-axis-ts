@@ -3,44 +3,137 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="HyperAxis TypeScript SDK 浏览器接入示例"
-    />
-    <title>HyperAxis TypeScript Example</title>
+    <meta name="description" content="Kango Trade Web3 交易终端：Hyperliquid 现货、永续与 HIP-3 RWA 实时行情" />
+    <title>Kango Trade</title>
   </head>
   <body>
-    <main class="page">
-      <header class="hero">
-        <p class="eyebrow">RUST CORE · TYPESCRIPT SDK · WEBASSEMBLY</p>
-        <h1>HyperAxis 浏览器示例</h1>
-        <p class="subtitle">
-          示例展示 WASM 初始化、精度处理、Info API、WebSocket 与限价单预处理。
-          不保存私钥，也不会提交订单。
-        </p>
-        <div class="status-row">
-          <span id="status-dot" class="status-dot"></span>
-          <span id="status">正在初始化 WASM…</span>
-        </div>
-      </header>
+    <div class="ticker-ribbon" aria-label="实时市场价格">
+      <div id="ticker-track" class="ticker-track">
+        <span>KANGO TRADE MARKET DATA</span><span>正在同步 Hyperliquid 主网行情…</span>
+      </div>
+    </div>
 
-      <section class="actions" aria-label="SDK 示例操作">
-        <button id="decimal-button" type="button" disabled>Decimal 精度</button>
-        <button id="info-button" type="button" disabled>请求 allMids</button>
-        <button id="ws-button" type="button" disabled>连接 WebSocket</button>
-        <button id="order-button" type="button" disabled>预处理测试订单</button>
-        <button id="logs-button" type="button" disabled>读取 SDK 日志</button>
+    <header class="site-header">
+      <a class="brand" href="#trade" aria-label="Kango Trade">
+        <span class="brand-mark" aria-hidden="true">K</span>
+        <span><strong>KANGO TRADE</strong><small>WEB3 TERMINAL</small></span>
+      </a>
+      <nav class="main-nav" aria-label="主导航">
+        <a class="active" href="#trade">交易</a><a href="#markets">市场</a><a href="#sdk-console">开发者</a>
+      </nav>
+      <div class="header-actions">
+        <span class="network-pill"><i></i> MAINNET</span>
+        <span id="protocol-version" class="protocol-pill">CORE --</span>
+        <div class="connection-state"><span id="status-dot" class="status-dot connecting"></span><span id="status">初始化 WASM</span></div>
+        <button id="reconnect-button" class="icon-button" type="button" disabled>重连</button>
+        <button class="wallet-button" type="button" disabled>连接钱包</button>
+      </div>
+    </header>
+
+    <main id="trade" class="terminal-shell">
+      <section class="trade-workspace">
+        <div class="trade-primary">
+          <section class="market-strip">
+            <div class="symbol-heading">
+              <span id="selected-market-kind" class="market-kind-tag perp">PERP</span>
+              <div><h1 id="selected-symbol">BTC-PERP</h1><span id="selected-wire-coin" class="wire-coin">BTC</span></div>
+              <span id="selected-venue" class="venue-name">Hyperliquid</span>
+            </div>
+            <div class="market-stat price-stat"><span>标记价格</span><strong id="market-price">--</strong><em id="market-change">--</em></div>
+            <div class="market-stat"><span>24H 成交额</span><strong id="market-volume">--</strong></div>
+            <div class="market-stat"><span>资金费率</span><strong id="market-funding">--</strong></div>
+            <div class="market-stat"><span>持仓量</span><strong id="market-open-interest">--</strong></div>
+            <div class="market-data-note"><span>DATA SOURCE</span><strong>HYPERLIQUID</strong><small>Rust Core validated</small></div>
+          </section>
+
+          <section class="panel chart-panel">
+          <div class="chart-toolbar">
+            <div class="chart-heading"><span class="section-kicker">PRICE CHART</span><strong id="chart-title">BTC · 5m</strong></div>
+            <div class="chart-mode-selector" role="group" aria-label="图表类型">
+              <button class="active" type="button" data-chart-mode="candles">K 线</button><button type="button" data-chart-mode="trend">趋势</button>
+            </div>
+            <div class="period-selector" role="group" aria-label="K 线周期">
+              <button type="button" data-interval="1m">1m</button><button type="button" data-interval="3m">3m</button><button type="button" class="active" data-interval="5m">5m</button><button type="button" data-interval="15m">15m</button><button type="button" data-interval="30m">30m</button>
+              <span class="period-divider"></span>
+              <button type="button" data-interval="1h">1H</button><button type="button" data-interval="2h">2H</button><button type="button" data-interval="4h">4H</button><button type="button" data-interval="8h">8H</button><button type="button" data-interval="12h">12H</button>
+              <span class="period-divider"></span>
+              <button type="button" data-interval="1d">1D</button><button type="button" data-interval="3d">3D</button><button type="button" data-interval="1w">1W</button><button type="button" data-interval="1M">1M</button>
+            </div>
+            <span id="chart-interval-hint" class="interval-hint" title="Hyperliquid candle 订阅最小周期为 1m">最小 1m</span>
+          </div>
+          <div class="chart-wrap">
+            <div id="chart-root" class="chart-root" aria-label="实时 K 线图"></div>
+            <div id="chart-loading" class="chart-loading"><span></span>正在载入历史 K 线…</div>
+          </div>
+          <div class="chart-footer"><span id="chart-feed-label">LIVE CANDLES · WEBSOCKET</span><a class="chart-attribution" href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView Lightweight Charts™ · Copyright © 2025 TradingView, Inc.</a></div>
+          </section>
+        </div>
+        <aside class="panel order-ticket">
+          <div class="ticket-head"><div><span class="section-kicker">ACCOUNT / ORDER ENTRY</span><h2>限价委托</h2></div><span class="preview-pill">PREVIEW</span></div>
+          <div class="account-summary">
+            <div><span>账户权益</span><strong>--</strong></div>
+            <div><span>可用余额</span><strong>未连接</strong></div>
+            <div><span>保证金占用</span><strong>--</strong></div>
+          </div>
+          <div class="side-switch" role="group" aria-label="交易方向"><button id="buy-side" class="active" type="button">做多</button><button id="sell-side" type="button">做空</button></div>
+          <div class="available-row"><span>可用抵押品</span><strong>-- USDC</strong></div>
+          <section id="perp-planner" class="perp-planner" aria-label="永续开仓规划">
+            <div class="planner-heading"><div><span class="section-kicker">ISOLATED POSITION</span><strong>逐仓开仓规划</strong></div><span>Papertrade 式交互</span></div>
+            <label class="form-field planner-margin"><span>保证金</span><div><input id="margin-input" inputmode="decimal" value="100" /><b>USDC</b></div></label>
+            <div class="leverage-control">
+              <div class="leverage-heading"><span>杠杆倍数</span><strong id="leverage-value">10×</strong></div>
+              <input id="leverage-slider" type="range" min="1" max="1000" step="1" value="10" aria-label="杠杆倍数" />
+              <div class="leverage-presets" aria-label="杠杆快捷选项"><button type="button" data-leverage="2">2×</button><button type="button" data-leverage="5">5×</button><button type="button" data-leverage="10">10×</button><button type="button" data-leverage-max>MAX</button></div>
+            </div>
+            <p>保证金与杠杆仅用于推导委托数量；最终保证金和清算规则由 Hyperliquid 账户状态决定。</p>
+          </section>
+          <label class="form-field"><span>限价</span><div><input id="price-input" inputmode="decimal" placeholder="0.00" /><b>USDC</b></div></label>
+          <label class="form-field"><span>数量</span><div><input id="size-input" inputmode="decimal" placeholder="0.001" /><b id="size-unit">BTC</b></div></label>
+          <label id="reduce-only-row" class="check-row"><input id="reduce-only" type="checkbox" /><span>只减仓</span></label>
+          <dl class="order-summary"><div><dt>订单类型</dt><dd>LIMIT / GTC</dd></div><div><dt id="order-total-label">名义价值</dt><dd id="order-total">-- USDC</dd></div><div id="zero-equity-row"><dt>零权益参考价</dt><dd id="zero-equity-price">--</dd></div><div><dt>资产 ID</dt><dd id="asset-id">--</dd></div></dl>
+          <button id="order-button" class="primary-order-button" type="button" disabled>生成买单摘要</button>
+          <p id="trade-notice" class="trade-notice">仅进行订单预处理，不保存私钥、不签名、不广播。</p>
+        </aside>
       </section>
 
-      <section class="console" aria-live="polite">
-        <div class="console-title">
-          <span>运行结果</span>
-          <span id="protocol-version">protocol: --</span>
+      <section class="activity-dock" aria-label="市场与盘口">
+        <div class="dock-heading">
+          <div class="dock-tabs"><span class="active">市场</span><span>订单簿</span><span>实时数据</span></div>
+          <span>HYPERLIQUID · LIVE</span>
         </div>
+        <div class="dock-grid">
+          <aside id="markets" class="panel market-browser">
+            <div class="panel-title-row">
+              <div><span class="section-kicker">MARKETS</span><h2>选择市场</h2></div><span id="market-count" class="muted-label">-- MARKETS</span>
+            </div>
+            <div class="segmented-control" role="tablist" aria-label="市场类型">
+              <button class="active" data-market-kind="perp" type="button" role="tab">永续 <span data-tab-count>--</span></button>
+              <button data-market-kind="spot" type="button" role="tab">现货 <span data-tab-count>--</span></button>
+              <button data-market-kind="rwa" type="button" role="tab">RWA <span data-tab-count>--</span></button>
+            </div>
+            <label class="search-field"><span aria-hidden="true">⌕</span><input id="market-search" type="search" placeholder="搜索 BTC、TSLA、GOLD…" autocomplete="off" /></label>
+            <div class="market-list-head"><span>市场 / 场所</span><span>最新价</span><span>类型</span></div>
+            <div id="market-list" class="market-list" aria-live="polite"><div class="empty-state">正在读取市场元数据…</div></div>
+            <div class="market-browser-foot"><span><i class="status-dot live"></i> 实时行情</span><span>HIP-3 RWA</span></div>
+          </aside>
+
+          <aside class="panel orderbook-panel">
+            <div class="panel-title-row"><div><span class="section-kicker">DEPTH</span><h2>订单簿</h2></div><span class="muted-label">L2 BOOK</span></div>
+            <div class="book-head"><span>价格</span><span>数量</span><span>累计</span></div>
+            <div id="orderbook-asks" class="book-side asks"></div>
+            <div class="spread-row"><strong id="spread-price">--</strong><span id="spread-value">Spread --</span></div>
+            <div id="orderbook-bids" class="book-side bids"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="sdk-console" class="panel console-card">
+        <div class="console-header"><div><span class="section-kicker">DEVELOPER CONSOLE</span><h2>SDK 运行日志</h2></div><button id="logs-button" class="secondary-button" type="button" disabled>读取脱敏日志</button></div>
         <pre id="output">等待 SDK 初始化…</pre>
       </section>
     </main>
 
+    <footer class="site-footer"><span>KANGO TRADE · POWERED BY HYPERAXIS</span><span>Market data © Hyperliquid · RWA via HIP-3 venues</span></footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

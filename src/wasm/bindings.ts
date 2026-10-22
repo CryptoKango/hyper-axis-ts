@@ -39,6 +39,9 @@ export interface HyperAxisWasmBindings {
     statusCode: number,
     body: string,
   ): string;
+  parse_perp_dexs_response_json(body: string): string;
+  parse_perp_meta_and_asset_ctxs_response_json(body: string): string;
+  parse_perp_meta_response_json(body: string): string;
   parse_websocket_message_json(message: string): string;
   prepare_info_query_json(queryJson: string): string;
   prepare_limit_order_json(

@@ -2,176 +2,315 @@ import {
   HyperAxisClient,
   HyperAxisError,
   createHyperAxisWasmLoader,
+  type HyperAxisCandleInterval,
+  type HyperAxisLimitOrderRequest,
 } from '@cryptokango/hyper-axis';
 
+import { MarketChart, type ChartMode } from './market-chart';
+import { HyperliquidMarketFeed } from './market-feed';
+import type {
+  AssetContext,
+  BboPoint,
+  CandlePoint,
+  FeedStatus,
+  MarketDefinition,
+  MarketKind,
+  OrderBookSnapshot,
+} from './market-types';
+import { ConnectionStatus } from './ui/connection-status';
+import { formatPrice, requireElement } from './ui/dom';
+import { MarketDirectory } from './ui/market-directory';
+import { MarketSummary } from './ui/market-summary';
+import { OrderBookPanel } from './ui/order-book-panel';
+import { TradeTicket, type TradeDraft } from './ui/trade-ticket';
+import './theme.css';
 import './style.css';
 
-const output = requireElement('output', HTMLPreElement);
-const status = requireElement('status', HTMLSpanElement);
-const statusDot = requireElement('status-dot', HTMLSpanElement);
 const protocolVersion = requireElement('protocol-version', HTMLSpanElement);
-const decimalButton = requireElement('decimal-button', HTMLButtonElement);
-const infoButton = requireElement('info-button', HTMLButtonElement);
-const websocketButton = requireElement('ws-button', HTMLButtonElement);
-const orderButton = requireElement('order-button', HTMLButtonElement);
+const tickerTrack = requireElement('ticker-track', HTMLDivElement);
+const chartTitle = requireElement('chart-title', HTMLElement);
+const chartFeedLabel = requireElement('chart-feed-label', HTMLSpanElement);
+const chartIntervalHint = requireElement('chart-interval-hint', HTMLSpanElement);
+const chartRoot = requireElement('chart-root', HTMLDivElement);
+const chartLoading = requireElement('chart-loading', HTMLDivElement);
 const logsButton = requireElement('logs-button', HTMLButtonElement);
+const output = requireElement('output', HTMLPreElement);
+const intervalButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-interval]')];
+const chartModeButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-chart-mode]')];
 
+const chart = new MarketChart(chartRoot);
+const summary = new MarketSummary();
+const orderBook = new OrderBookPanel();
+const directory = new MarketDirectory({
+  onKindChange: handleKindChange,
+  onSelect: (market: MarketDefinition): void => {
+    void selectMarket(market);
+  },
+});
+const tradeTicket = new TradeTicket(handlePrepareOrder);
+const connection = new ConnectionStatus(() => feed?.reconnectNow());
 const loader = createHyperAxisWasmLoader({
   importModule: () => import('@cryptokango/hyper-axis/wasm'),
 });
-const client = await initializeClient();
-let socket: WebSocket | undefined;
 
-client.configureLogging({ enabled: true, level: 'info', capacity: 200 });
-protocolVersion.textContent = `protocol: ${client.protocolVersion}`;
-status.textContent = 'WASM 已就绪';
-statusDot.classList.add('ready');
-setButtonsDisabled(false);
-writeOutput('初始化完成', {
-  protocolVersion: client.protocolVersion,
-  websocketUrl: client.websocketUrl('testnet'),
-});
+let client: HyperAxisClient | undefined;
+let feed: HyperliquidMarketFeed | undefined;
+let markets: readonly MarketDefinition[] = [];
+let selectedMarket: MarketDefinition | undefined;
+let selectedInterval: HyperAxisCandleInterval = '5m';
+let selectedChartMode: ChartMode = 'candles';
+let mids: Readonly<Record<string, number>> = {};
+let contexts: Readonly<Record<string, AssetContext>> = {};
 
-decimalButton.addEventListener('click', handleNormalizeDecimal);
-infoButton.addEventListener('click', handleLoadAllMids);
-websocketButton.addEventListener('click', handleWebSocketToggle);
-orderButton.addEventListener('click', handlePrepareOrder);
-logsButton.addEventListener('click', handleReadLogs);
-window.addEventListener('beforeunload', closeWebSocket);
+bindEvents();
+void bootstrap();
 
-async function initializeClient(): Promise<HyperAxisClient> {
+async function bootstrap(): Promise<void> {
   try {
-    return await HyperAxisClient.initialize(loader);
+    client = await HyperAxisClient.initialize(loader);
+    client.configureLogging({ enabled: true, level: 'info', capacity: 300 });
+    protocolVersion.textContent = `CORE ${client.protocolVersion}`;
+    feed = new HyperliquidMarketFeed(client, {
+      onStatus: (status: FeedStatus): void => { connection.render(status); },
+      onSnapshot: handleCandleSnapshot,
+      onCandle: handleCandle,
+      onBbo: handleBbo,
+      onBook: (book: OrderBookSnapshot): void => { orderBook.render(book); },
+      onMids: handleMids,
+      onAssetContext: handleAssetContext,
+      onError: (error: unknown): void => { writeError('市场数据错误', error); },
+    });
+
+    const catalog = await feed.loadMarkets();
+    markets = catalog.markets;
+    contexts = catalog.initialContexts;
+    mids = Object.freeze(Object.fromEntries(
+      Object.entries(contexts).flatMap(([coin, context]) =>
+        context.price === null ? [] : [[coin, context.price]]),
+    ));
+    if (markets.length === 0) throw new Error('Hyperliquid 未返回可用市场。');
+
+    directory.setMarkets(markets);
+    directory.setMids(mids);
+    connection.enable();
+    logsButton.disabled = false;
+    const initialMarket = directory.firstMarket('perp');
+    if (initialMarket === undefined) throw new Error('未找到默认合约市场。');
+    await selectMarket(initialMarket);
+    feed.connect();
+    renderTicker();
+    writeOutput('Kango Trade 0.2 初始化完成', {
+      network: 'mainnet',
+      perpetuals: countMarkets('perp'),
+      spot: countMarkets('spot'),
+      rwa: countMarkets('rwa'),
+      rwaDexes: catalog.rwaDexes,
+      chart: 'tradingview/lightweight-charts@5.2.1',
+      protocolVersion: client.protocolVersion,
+    });
   } catch (error: unknown) {
-    status.textContent = 'WASM 初始化失败';
-    statusDot.classList.add('error');
+    connection.renderFailure();
     writeError('初始化失败', error);
-    throw error;
   }
 }
 
-function handleNormalizeDecimal(): void {
-  runSafely('Decimal 规范化', () => {
-    const input = '00123.450000';
-    return { input, normalized: client.normalizeDecimal(input) };
-  });
-}
-
-function handleLoadAllMids(): void {
-  runSafelyAsync('allMids 响应', async () => {
-    const request = client.buildTypedInfoHttpRequest('testnet', {
-      type: 'allMids',
-      dex: '',
+function bindEvents(): void {
+  for (const button of chartModeButtons) {
+    button.addEventListener('click', () => {
+      const mode = parseChartMode(button.dataset['chartMode']);
+      if (mode === null) return;
+      selectedChartMode = mode;
+      chart.setMode(mode);
+      renderChartControls();
     });
-    const response = await fetch(request.url, {
-      method: request.method,
-      headers: request.headers,
-      body: request.body,
-    });
-    return client.parseHttpResponse(
-      request.kind,
-      response.status,
-      await response.text(),
-    );
-  });
-}
-
-function handleWebSocketToggle(): void {
-  if (socket !== undefined) {
-    closeWebSocket();
-    return;
   }
-
-  runSafely('WebSocket', () => {
-    const nextSocket = new WebSocket(client.websocketUrl('testnet'));
-    socket = nextSocket;
-    websocketButton.textContent = '断开 WebSocket';
-
-    nextSocket.addEventListener('open', handleWebSocketOpen);
-    nextSocket.addEventListener('message', handleWebSocketMessage);
-    nextSocket.addEventListener('close', handleWebSocketClose);
-    nextSocket.addEventListener('error', handleWebSocketError);
-    return { state: 'connecting' };
+  for (const button of intervalButtons) {
+    button.addEventListener('click', () => {
+      const interval = parseInterval(button.dataset['interval']);
+      if (interval === null || selectedMarket === undefined) return;
+      selectedInterval = interval;
+      renderIntervals();
+      void reloadSelection();
+    });
+  }
+  logsButton.addEventListener('click', () => {
+    if (client !== undefined) writeOutput('SDK 脱敏日志', client.snapshotLogs());
+  });
+  window.addEventListener('beforeunload', () => {
+    feed?.[Symbol.dispose]();
+    chart[Symbol.dispose]();
   });
 }
 
-function handleWebSocketOpen(): void {
-  socket?.send(client.websocketSubscribe({ type: 'allMids', dex: '' }));
-  writeOutput('WebSocket', { state: 'connected', subscription: 'allMids' });
+function handleKindChange(kind: MarketKind): void {
+  const next = directory.firstMarket(kind);
+  if (next !== undefined) void selectMarket(next);
 }
 
-function handleWebSocketMessage(event: MessageEvent<unknown>): void {
-  const message = event.data;
-  if (typeof message !== 'string') return;
-  runSafely('WebSocket 消息', () => client.parseWebSocketMessage(message));
+async function selectMarket(market: MarketDefinition): Promise<void> {
+  selectedMarket = market;
+  const latestPrice = mids[market.coin] ?? contexts[market.coin]?.price ?? null;
+  directory.setSelected(market);
+  summary.setMarket(market, latestPrice);
+  const context = contexts[market.coin];
+  if (context !== undefined) summary.updateContext(context, market.kind);
+  tradeTicket.setMarket(market, latestPrice);
+  orderBook.reset();
+  chart.setCandleData([]);
+  chart.resetTrend();
+  renderChartControls();
+  chartLoading.textContent = selectedChartMode === 'trend'
+    ? '正在等待实时 BBO…'
+    : '正在载入历史 K 线…';
+  chartLoading.classList.remove('hidden');
+  await feed?.select({ market, interval: selectedInterval });
 }
 
-function handleWebSocketClose(): void {
-  socket = undefined;
-  websocketButton.textContent = '连接 WebSocket';
-  writeOutput('WebSocket', { state: 'closed' });
+async function reloadSelection(): Promise<void> {
+  const market = selectedMarket;
+  if (market === undefined) return;
+  renderChartControls();
+  chartLoading.textContent = '正在切换 K 线周期…';
+  chartLoading.classList.remove('hidden');
+  chart.setCandleData([]);
+  await feed?.select({ market, interval: selectedInterval });
 }
 
-function handleWebSocketError(): void {
-  writeOutput('WebSocket', { state: 'error' });
+function handleCandleSnapshot(candles: readonly CandlePoint[]): void {
+  chart.setCandleData(candles);
+  const latest = candles.at(-1);
+  if (latest !== undefined) updatePrice(latest.close);
+  if (selectedChartMode === 'candles') {
+    chartLoading.textContent = candles.length === 0 ? '该市场暂无历史 K 线' : '';
+    chartLoading.classList.toggle('hidden', candles.length > 0);
+  }
 }
 
-function closeWebSocket(): void {
-  const activeSocket = socket;
-  socket = undefined;
-  activeSocket?.close();
-  websocketButton.textContent = '连接 WebSocket';
+function handleCandle(candle: CandlePoint): void {
+  chart.updateCandle(candle);
+  if (selectedChartMode === 'candles') chartLoading.classList.add('hidden');
+  updatePrice(candle.close);
 }
 
-function handlePrepareOrder(): void {
-  runSafely('限价单预处理（未签名、未提交）', () => {
-    const nonceManager = client.createNonceManager();
+function handleBbo(point: BboPoint): void {
+  if (!chart.updateTrend(point)) return;
+  if (selectedChartMode === 'trend') chartLoading.classList.add('hidden');
+  updatePrice(point.price);
+}
+
+function handleMids(nextMids: Readonly<Record<string, number>>): void {
+  mids = Object.freeze({ ...mids, ...nextMids });
+  directory.setMids(mids);
+  const market = selectedMarket;
+  if (market !== undefined) {
+    const price = mids[market.coin];
+    if (price !== undefined) updatePrice(price);
+  }
+  renderTicker();
+}
+
+function handleAssetContext(context: AssetContext): void {
+  const market = selectedMarket;
+  if (market === undefined) return;
+  contexts = Object.freeze({ ...contexts, [market.coin]: context });
+  summary.updateContext(context, market.kind);
+  if (context.price !== null) updatePrice(context.price);
+}
+
+function updatePrice(price: number | null): void {
+  summary.updatePrice(price);
+  orderBook.updatePrice(price);
+  tradeTicket.updatePrice(price);
+}
+
+function renderTicker(): void {
+  const priorities = ['BTC', 'ETH', 'HYPE', 'xyz:TSLA', 'xyz:GOLD', 'xyz:NVDA'];
+  const selected = priorities.flatMap((coin) => {
+    const market = markets.find((candidate) => candidate.coin === coin);
+    return market === undefined || mids[coin] === undefined ? [] : [market];
+  });
+  const fallback = markets.filter((market) => mids[market.coin] !== undefined).slice(0, 8);
+  const tickerMarkets = selected.length >= 3 ? selected : fallback;
+  if (tickerMarkets.length === 0) return;
+  tickerTrack.replaceChildren();
+  for (const market of [...tickerMarkets, ...tickerMarkets]) {
+    const item = document.createElement('span');
+    item.className = 'ticker-price';
+    item.textContent = `${market.displayName}  ${formatPrice(mids[market.coin] ?? null)}`;
+    tickerTrack.append(item);
+  }
+}
+
+function handlePrepareOrder(draft: TradeDraft): void {
+  const activeClient = client;
+  const market = selectedMarket;
+  if (activeClient === undefined || market === undefined || market.asset === null) return;
+  try {
+    const nonceManager = activeClient.createNonceManager();
     try {
-      const prepared = client.prepareLimitOrder({
-        network: 'testnet',
-        asset: 0,
-        marketKind: 'perp',
-        sizeDecimals: 5,
-        side: 'buy',
-        limitPrice: '1000',
-        size: '0.001',
-        timeInForce: 'Gtc',
-        nonce: nonceManager.next(Date.now().toString()),
-      });
-      return {
+      const base = {
+        network: 'mainnet' as const,
+        asset: market.asset,
+        marketKind: market.protocolKind,
+        sizeDecimals: market.sizeDecimals,
+        side: draft.side,
+        limitPrice: activeClient.normalizeDecimal(draft.limitPrice),
+        size: activeClient.normalizeDecimal(draft.size),
+        timeInForce: 'Gtc' as const,
+        nonce: nonceManager.next(String(Date.now())),
+      };
+      const request: HyperAxisLimitOrderRequest = market.protocolKind === 'perp'
+        ? { ...base, reduceOnly: draft.reduceOnly }
+        : base;
+      const prepared = activeClient.prepareLimitOrder(request);
+      writeOutput('订单已由 Rust Core 完成预处理（未签名、未提交）', {
+        market: market.displayName,
+        wireCoin: market.coin,
+        asset: market.asset,
+        side: draft.side,
+        positionPlan: draft.perpPlan,
+        action: prepared.action,
         actionHashHex: prepared.actionHashHex,
         signingDigestHex: prepared.signingDigestHex,
-        nextStep: '将 signingDigestHex 交给受信任的钱包适配器签名',
-      };
+      });
     } finally {
       nonceManager.dispose();
     }
-  });
-}
-
-function handleReadLogs(): void {
-  runSafely('SDK 脱敏日志', () => client.snapshotLogs());
-}
-
-function runSafely(label: string, operation: () => unknown): void {
-  try {
-    writeOutput(label, operation());
   } catch (error: unknown) {
-    writeError(label, error);
+    writeError('订单预处理失败', error);
   }
 }
 
-function runSafelyAsync(
-  label: string,
-  operation: () => Promise<unknown>,
-): void {
-  operation()
-    .then((value: unknown) => {
-      writeOutput(label, value);
-    })
-    .catch((error: unknown) => {
-      writeError(label, error);
-    });
+function renderIntervals(): void {
+  for (const button of intervalButtons) {
+    button.classList.toggle('active', button.dataset['interval'] === selectedInterval);
+  }
+}
+
+function renderChartControls(): void {
+  const marketName = selectedMarket?.displayName ?? 'MARKET';
+  const showTrend = selectedChartMode === 'trend';
+  chartTitle.textContent = showTrend
+    ? `${marketName} · 实时`
+    : `${marketName} · ${selectedInterval}`;
+  chartFeedLabel.textContent = showTrend
+    ? 'LIVE BBO MID · 125MS BUCKETS'
+    : 'LIVE CANDLES · WEBSOCKET';
+  chartIntervalHint.textContent = showTrend ? 'BBO 实时' : '最小 1m';
+  chartIntervalHint.title = showTrend
+    ? '趋势图使用 Hyperliquid BBO 中间价，绘制刷新上限为 10 FPS'
+    : 'Hyperliquid candle 订阅最小周期为 1m';
+  for (const button of chartModeButtons) {
+    button.classList.toggle('active', button.dataset['chartMode'] === selectedChartMode);
+  }
+  for (const button of intervalButtons) button.disabled = showTrend;
+  if (showTrend) {
+    chartLoading.textContent = chart.hasTrendData ? '' : '正在等待实时 BBO…';
+    chartLoading.classList.toggle('hidden', chart.hasTrendData);
+  } else {
+    chartLoading.textContent = chart.hasCandleData ? '' : '正在载入历史 K 线…';
+    chartLoading.classList.toggle('hidden', chart.hasCandleData);
+  }
 }
 
 function writeError(label: string, error: unknown): void {
@@ -184,36 +323,25 @@ function writeError(label: string, error: unknown): void {
     });
     return;
   }
-  writeOutput(label, {
-    error: error instanceof Error ? error.message : '未知错误',
-  });
+  writeOutput(label, { error: error instanceof Error ? error.message : '未知错误' });
 }
 
 function writeOutput(label: string, value: unknown): void {
-  output.textContent = `${label}\n\n${formatValue(value)}`;
+  output.textContent = `${label}\n\n${typeof value === 'string' ? value : JSON.stringify(value, null, 2)}`;
 }
 
-function formatValue(value: unknown): string {
-  if (typeof value === 'string') return value;
-  const serialized = JSON.stringify(value, null, 2);
-  return serialized;
+function countMarkets(kind: MarketKind): number {
+  return markets.filter((market) => market.kind === kind).length;
 }
 
-function setButtonsDisabled(disabled: boolean): void {
-  decimalButton.disabled = disabled;
-  infoButton.disabled = disabled;
-  websocketButton.disabled = disabled;
-  orderButton.disabled = disabled;
-  logsButton.disabled = disabled;
+function parseInterval(value: string | undefined): HyperAxisCandleInterval | null {
+  const intervals: readonly HyperAxisCandleInterval[] = [
+    '1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '8h', '12h',
+    '1d', '3d', '1w', '1M',
+  ];
+  return intervals.find((interval) => interval === value) ?? null;
 }
 
-function requireElement<TElement extends HTMLElement>(
-  id: string,
-  elementType: new () => TElement,
-): TElement {
-  const element = document.getElementById(id);
-  if (!(element instanceof elementType)) {
-    throw new Error(`缺少页面元素或元素类型不匹配 #${id}`);
-  }
-  return element;
+function parseChartMode(value: string | undefined): ChartMode | null {
+  return value === 'candles' || value === 'trend' ? value : null;
 }

@@ -5,7 +5,7 @@ export default tseslint.config(
   {
     ignores: [
       '**/*.mjs',
-      'dist/**',
+      '**/dist/**',
       'node_modules/**',
       'wasm/**',
       'coverage/**',

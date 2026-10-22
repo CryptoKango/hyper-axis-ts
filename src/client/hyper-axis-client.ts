@@ -11,7 +11,7 @@ import {
   decodeWebSocketMessage,
 } from '../internal/codec.js';
 import type { HyperAxisNetwork } from '../models/common.js';
-import { type JsonObject, stringifyJson } from '../models/json.js';
+import { type JsonObject, type JsonValue, parseJson, stringifyJson } from '../models/json.js';
 import type {
   HyperAxisAppliedLoggingConfig,
   HyperAxisLogBatch,
@@ -256,6 +256,30 @@ export class HyperAxisClient {
     return this.#invoke('parseHttpResponse', () =>
       decodeParsedHttpResponse(
         this.#wasm.parse_http_response_json(requestKind, statusCode, body),
+      ),
+    );
+  }
+
+  /** Validates a `perpDexs` response with the pinned Rust protocol schema. */
+  public parsePerpDexsResponse(body: string): JsonValue {
+    return this.#invoke('parsePerpDexsResponse', () =>
+      parseJson(this.#wasm.parse_perp_dexs_response_json(body), 'parsePerpDexsResponse'),
+    );
+  }
+
+  /** Validates a native or HIP-3 `meta` response with Rust Core. */
+  public parsePerpMetaResponse(body: string): JsonValue {
+    return this.#invoke('parsePerpMetaResponse', () =>
+      parseJson(this.#wasm.parse_perp_meta_response_json(body), 'parsePerpMetaResponse'),
+    );
+  }
+
+  /** Validates an aligned native or HIP-3 `metaAndAssetCtxs` response. */
+  public parsePerpMetaAndAssetCtxsResponse(body: string): JsonValue {
+    return this.#invoke('parsePerpMetaAndAssetCtxsResponse', () =>
+      parseJson(
+        this.#wasm.parse_perp_meta_and_asset_ctxs_response_json(body),
+        'parsePerpMetaAndAssetCtxsResponse',
       ),
     );
   }

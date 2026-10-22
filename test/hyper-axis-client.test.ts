@@ -15,12 +15,12 @@ describe('HyperAxisClient initialization', () => {
     ]);
 
     expect(first).toBe(second);
-    expect(first.protocolVersion).toBe('0.1.0');
+    expect(first.protocolVersion).toBe('0.2.0');
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
   it('rejects an incompatible Rust protocol version', async () => {
-    const bindings = createFakeBindings({ protocol_version: () => '0.2.0' });
+    const bindings = createFakeBindings({ protocol_version: () => '0.3.0' });
 
     await expect(
       HyperAxisClient.initialize(() => Promise.resolve(bindings)),
@@ -165,6 +165,34 @@ describe('HyperAxisClient runtime and transport', () => {
     );
     expect(request.kind).toBe('info');
     expect(Object.isFrozen(request.headers)).toBe(true);
+  });
+
+  it('passes HIP-3 dex scope and validates typed RWA responses in Rust', async () => {
+    const prepare = vi.fn(() =>
+      JSON.stringify({
+        queryType: 'metaAndAssetCtxs',
+        body: '{"type":"metaAndAssetCtxs","dex":"xyz"}',
+      }),
+    );
+    const parse = vi.fn((body: string) => body);
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(
+        createFakeBindings({
+          prepare_info_query_json: prepare,
+          parse_perp_meta_and_asset_ctxs_response_json: parse,
+        }),
+      ),
+    );
+
+    const prepared = client.prepareInfoQuery({ type: 'metaAndAssetCtxs', dex: 'xyz' });
+    const response = client.parsePerpMetaAndAssetCtxsResponse('[{"universe":[]},[]]');
+
+    expect(prepare).toHaveBeenCalledWith(
+      JSON.stringify({ type: 'metaAndAssetCtxs', dex: 'xyz' }),
+    );
+    expect(prepared.body).toContain('"dex":"xyz"');
+    expect(parse).toHaveBeenCalledOnce();
+    expect(response).toEqual([{ universe: [] }, []]);
   });
 
   it('validates host-side integer boundaries before invoking Rust', async () => {

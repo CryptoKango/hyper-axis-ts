@@ -498,6 +498,37 @@ export function normalize_decimal(value: string): string;
 export function parse_http_response_json(request_kind: string, status_code: number, body: string): string;
 
 /**
+ * Validates and canonicalizes a `perpDexs` response.
+ *
+ * Null array entries are preserved because their indexes are part of HIP-3
+ * asset ID calculation.
+ *
+ * # Errors
+ *
+ * Returns a JavaScript error when the response does not match the protocol schema.
+ */
+export function parse_perp_dexs_response_json(body: string): string;
+
+/**
+ * Validates and canonicalizes a native or HIP-3 `metaAndAssetCtxs` response.
+ *
+ * # Errors
+ *
+ * Returns a JavaScript error when the response is malformed or its market and
+ * context counts differ.
+ */
+export function parse_perp_meta_and_asset_ctxs_response_json(body: string): string;
+
+/**
+ * Validates and canonicalizes a native or HIP-3 `meta` response.
+ *
+ * # Errors
+ *
+ * Returns a JavaScript error when the response does not match the protocol schema.
+ */
+export function parse_perp_meta_response_json(body: string): string;
+
+/**
  * Parses one inbound WebSocket message into stable JSON.
  *
  * # Errors
@@ -1449,6 +1480,9 @@ export interface InitOutput {
     readonly host_failure_retry_advice: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly normalize_decimal: (a: number, b: number) => [number, number, number, number];
     readonly parse_http_response_json: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+    readonly parse_perp_dexs_response_json: (a: number, b: number) => [number, number, number, number];
+    readonly parse_perp_meta_and_asset_ctxs_response_json: (a: number, b: number) => [number, number, number, number];
+    readonly parse_perp_meta_response_json: (a: number, b: number) => [number, number, number, number];
     readonly parse_websocket_message_json: (a: number, b: number) => [number, number, number, number];
     readonly prepare_agent_enable_dex_abstraction_json: (a: number, b: number) => [number, number, number, number];
     readonly prepare_agent_set_abstraction_json: (a: number, b: number) => [number, number, number, number];

@@ -4,9 +4,9 @@
 
 当前版本：
 
-- TypeScript SDK：`0.1.0`
-- Rust Core：[`v0.1.0`](https://github.com/CryptoKango/hyper-axis/tree/v0.1.0)
-- Rust 固定提交：`da335740afba6f4d3ed9848efddc622072e04ab6`
+- TypeScript SDK：`0.2.0`
+- Rust Core：[`v0.2.0`](https://github.com/CryptoKango/hyper-axis/tree/v0.2.0)
+- Rust 固定提交：`d81890f6a76d761530506e5ab9d640502d0cc2cf`
 
 ## 架构边界
 
@@ -58,7 +58,7 @@ const loader = createHyperAxisWasmLoader({
 });
 
 const hyperAxis = await HyperAxisClient.initialize(loader);
-console.log(hyperAxis.protocolVersion); // 0.1.0
+console.log(hyperAxis.protocolVersion); // 0.2.0
 ```
 
 同一个 loader 的并发初始化只执行一次。SDK 会拒绝加载协议版本不兼容的 WASM。
@@ -132,6 +132,36 @@ const parsed = hyperAxis.parseHttpResponse(
 );
 ```
 
+HIP-3 / RWA 数据先查询 DEX，再按 DEX 获取市场元数据与上下文。响应校验由
+Rust Core 完成，TypeScript 只负责网络传输与应用编排：
+
+```ts
+const dexRequest = hyperAxis.buildTypedInfoHttpRequest('mainnet', {
+  type: 'perpDexs',
+});
+const dexResponse = await fetch(dexRequest.url, {
+  method: dexRequest.method,
+  headers: dexRequest.headers,
+  body: dexRequest.body,
+});
+const dexes = hyperAxis.parsePerpDexsResponse(await dexResponse.text());
+
+const rwaRequest = hyperAxis.buildTypedInfoHttpRequest('mainnet', {
+  type: 'metaAndAssetCtxs',
+  dex: 'xyz',
+});
+const rwaResponse = await fetch(rwaRequest.url, {
+  method: rwaRequest.method,
+  headers: rwaRequest.headers,
+  body: rwaRequest.body,
+});
+const rwaMarkets = hyperAxis.parsePerpMetaAndAssetCtxsResponse(
+  await rwaResponse.text(),
+);
+```
+
+完整的 RWA 场所发现、分类与实时订阅实现见 [`example/`](./example/README.md)。
+
 ## WebSocket
 
 TypeScript SDK 生成并校验 WebSocket 消息，连接、重连、心跳定时和订阅恢复由应用的网络层负责。
@@ -143,7 +173,6 @@ socket.addEventListener('open', () => {
   socket.send(
     hyperAxis.websocketSubscribe({
       type: 'allMids',
-      dex: '',
     }),
   );
 });

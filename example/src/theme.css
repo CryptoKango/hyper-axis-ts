@@ -1,0 +1,71 @@
+:root {
+  color-scheme: light;
+  color: var(--color-text-primary);
+  background: var(--color-surface-canvas);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+
+  /* Kango Trade brand */
+  --color-brand-primary: #ff8318;
+  --color-brand-primary-strong: #c95400;
+  --color-brand-primary-soft: #ffe0c2;
+  --color-brand-secondary: #c89de9;
+  --color-brand-secondary-strong: #6834a2;
+
+  /* Retro-comic decoration: never carries trading direction. */
+  --color-accent-pink: #f391cd;
+  --color-accent-yellow: #f4ea68;
+  --color-accent-rwa: #ffd1ae;
+  --color-accent-info: #a9d2f2;
+
+  /* Trading semantics: reserved for direction and state. */
+  --color-long: #91e3b4;
+  --color-long-strong: #137743;
+  --color-long-chart: #35c978;
+  --color-long-chart-strong: #178f50;
+  --color-long-depth: rgb(145 227 180 / 28%);
+  --color-long-volume: rgb(53 201 120 / 44%);
+  --color-short: #f7908d;
+  --color-short-strong: #b73549;
+  --color-short-chart: #ff6b7b;
+  --color-short-chart-strong: #d73b53;
+  --color-short-depth: rgb(247 144 141 / 22%);
+  --color-short-volume: rgb(255 107 123 / 44%);
+  --color-live: #23bc71;
+  --color-live-ring: rgb(43 207 125 / 15%);
+
+  /* Neutral surfaces and typography. */
+  --color-surface-canvas: #ececef;
+  --color-surface-paper: #fffefa;
+  --color-surface-raised: #f2efea;
+  --color-surface-control: #f0ede7;
+  --color-surface-hover: #f5f0df;
+  --color-surface-selected: #fff2df;
+  --color-surface-disabled: #dedbd5;
+  --color-text-primary: #211f1d;
+  --color-text-muted: #746f69;
+  --color-border: #211f1d;
+  --color-border-soft: #cbc7c1;
+  --color-grid: #e7e1d8;
+  --color-console: #25221f;
+  --color-focus: #c95400;
+  --color-trend-line: #211f1d;
+  --color-trend-fill-top: rgb(255 131 24 / 22%);
+  --color-trend-fill-bottom: rgb(255 131 24 / 3%);
+
+  /* Compatibility aliases for existing components during token migration. */
+  --ink: var(--color-border);
+  --paper: var(--color-surface-paper);
+  --canvas: var(--color-surface-canvas);
+  --line: var(--color-border);
+  --line-soft: var(--color-border-soft);
+  --text: var(--color-text-primary);
+  --muted: var(--color-text-muted);
+  --pink: var(--color-accent-pink);
+  --purple: var(--color-brand-secondary);
+  --yellow: var(--color-accent-yellow);
+  --orange: var(--color-brand-primary);
+  --green: var(--color-long);
+  --red: var(--color-short);
+  --blue: var(--color-accent-info);
+}
