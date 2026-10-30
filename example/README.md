@@ -35,7 +35,7 @@ example 浏览器应用
 ```json
 {
   "dependencies": {
-    "@cryptokango/hyper-axis": "github:CryptoKango/hyper-axis-ts#v0.2.0"
+    "@cryptokango/hyper-axis": "github:CryptoKango/hyper-axis-ts#v0.3.0"
   }
 }
 ```

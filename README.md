@@ -4,9 +4,9 @@
 
 当前版本：
 
-- TypeScript SDK：`0.2.0`
-- Rust Core：[`v0.2.0`](https://github.com/CryptoKango/hyper-axis/tree/v0.2.0)
-- Rust 固定提交：`d81890f6a76d761530506e5ab9d640502d0cc2cf`
+- TypeScript SDK：`0.3.0`
+- Rust Core：[`v0.3.0`](https://github.com/CryptoKango/hyper-axis/tree/v0.3.0)
+- Rust 固定提交：`d273ded3b69c6c3eb61fb396a2a265a16ff0dfc4`
 
 ## 架构边界
 
@@ -33,6 +33,16 @@ npm run check
 
 `build:wasm` 从 GitHub 克隆固定的 Rust tag，并验证固定 commit；不会依赖相邻目录或开发者机器上的本地 Rust 仓库。
 
+尚未发布的 Rust Core API 只能通过显式开发覆盖联调，不能修改正式固定项：
+
+```bash
+HYPER_AXIS_CORE_DEV_ROOT=/absolute/path/to/hyper-axis npm run build:wasm
+npm run check
+npm run test:wasm
+```
+
+正式发版必须先发布 Rust Core tag，再同步这里的 tag、commit、SDK 版本与生成的 WASM。
+
 完整浏览器接入可参考 [`example/`](./example/README.md)。
 
 也可以直接依赖 GitHub `master`；仓库提交固定版本的 WASM 生成物，npm 的 `prepare` 生命周期只构建 TypeScript，因此消费端不需要安装 Rust：
@@ -58,7 +68,7 @@ const loader = createHyperAxisWasmLoader({
 });
 
 const hyperAxis = await HyperAxisClient.initialize(loader);
-console.log(hyperAxis.protocolVersion); // 0.2.0
+console.log(hyperAxis.protocolVersion); // 0.3.0
 ```
 
 同一个 loader 的并发初始化只执行一次。SDK 会拒绝加载协议版本不兼容的 WASM。
@@ -132,6 +142,45 @@ const parsed = hyperAxis.parseHttpResponse(
 );
 ```
 
+合约与现货账户沿用同一套类型化 Info API，并由 Rust 校验响应：
+
+```ts
+const address = '0x000000000000000000000000000000000000beef';
+
+const perpRequest = hyperAxis.buildTypedInfoHttpRequest('mainnet', {
+  type: 'clearinghouseState',
+  user: address,
+  dex: '',
+});
+const spotRequest = hyperAxis.buildTypedInfoHttpRequest('mainnet', {
+  type: 'spotClearinghouseState',
+  user: address,
+});
+
+const perpState = hyperAxis.parsePerpAccountState(perpResponseBody);
+const spotState = hyperAxis.parseSpotAccountState(spotResponseBody);
+```
+
+Spot/Perp USDC 划转只生成签名摘要，不接触私钥：
+
+```ts
+const preparedTransfer = hyperAxis.prepareUsdClassTransfer({
+  network: 'mainnet',
+  amount: '1.25',
+  toPerp: true,
+  nonce,
+});
+const transferSignature = await wallet.signDigest(
+  preparedTransfer.signingDigestHex,
+);
+const finalizedTransfer = hyperAxis.finalizeUsdClassTransfer({
+  prepared: preparedTransfer,
+  signature: transferSignature,
+  expectedSigner: wallet.address,
+});
+const transferRequest = hyperAxis.buildExchangeHttpRequest(finalizedTransfer);
+```
+
 HIP-3 / RWA 数据先查询 DEX，再按 DEX 获取市场元数据与上下文。响应校验由
 Rust Core 完成，TypeScript 只负责网络传输与应用编排：
 
@@ -176,6 +225,23 @@ socket.addEventListener('open', () => {
     }),
   );
 });
+
+// 合约账户实时状态；空 dex 表示原生 perpetual DEX。
+socket.send(
+  hyperAxis.websocketSubscribe({
+    type: 'clearinghouseState',
+    user: wallet.address,
+    dex: '',
+  }),
+);
+
+// 现货账户实时状态。
+socket.send(
+  hyperAxis.websocketSubscribe({
+    type: 'spotState',
+    user: wallet.address,
+  }),
+);
 
 socket.addEventListener('message', (event) => {
   if (typeof event.data !== 'string') return;

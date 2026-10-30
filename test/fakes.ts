@@ -43,6 +43,12 @@ export function createFakeBindings(
         requestJson: '{"action":{}}',
         recoveredSigner: '0x0000000000000000000000000000000000000001',
       }),
+    finalize_usd_class_transfer_json: () =>
+      JSON.stringify({
+        endpoint: 'https://api.hyperliquid.xyz/exchange',
+        requestJson: '{"action":{}}',
+        recoveredSigner: '0x0000000000000000000000000000000000000001',
+      }),
     host_failure_retry_advice: () => JSON.stringify('safeAfterBackoff'),
     normalize_decimal: (value) => value,
     parse_http_response_json: (requestKind, statusCode) =>
@@ -57,12 +63,15 @@ export function createFakeBindings(
     parse_perp_dexs_response_json: (body) => body,
     parse_perp_meta_and_asset_ctxs_response_json: (body) => body,
     parse_perp_meta_response_json: (body) => body,
+    parse_perp_clearinghouse_state_response_json: (body) => body,
+    parse_spot_clearinghouse_state_response_json: (body) => body,
     parse_websocket_message_json: () => JSON.stringify({ channel: 'pong' }),
     prepare_info_query_json: () =>
       JSON.stringify({ queryType: 'allMids', body: '{"type":"allMids"}' }),
     prepare_limit_order_json: () => preparedActionJson,
+    prepare_usd_class_transfer_json: () => preparedUserActionJson,
     prepared_signing_digest: () => `0x${'11'.repeat(32)}`,
-    protocol_version: () => '0.2.0',
+    protocol_version: () => '0.3.0',
     snapshot_logs_json: () => JSON.stringify({ dropped: '0', records: [] }),
     validate_exchange_nonce: () => undefined,
     websocket_action_post_json: (id) => JSON.stringify({ id, type: 'action' }),
@@ -87,6 +96,21 @@ export const preparedActionJson = JSON.stringify({
   messagePackHex: '0x01',
   actionHashHex: `0x${'22'.repeat(32)}`,
   signingDigestHex: `0x${'11'.repeat(32)}`,
+});
+
+export const preparedUserActionJson = JSON.stringify({
+  network: 'mainnet',
+  action: {
+    type: 'usdClassTransfer',
+    hyperliquidChain: 'Mainnet',
+    signatureChainId: '0x66eee',
+    amount: '12.5',
+    toPerp: true,
+    nonce: '1700000000000',
+  },
+  nonce: '1700000000000',
+  actionJson: '{"type":"usdClassTransfer"}',
+  signingDigestHex: `0x${'33'.repeat(32)}`,
 });
 
 function httpRequestJson(kind: 'info' | 'signedAction'): string {

@@ -32,6 +32,13 @@ export interface HyperAxisWasmBindings {
     v: number,
     expectedSigner: string,
   ): string;
+  finalize_usd_class_transfer_json(
+    preparedJson: string,
+    r: string,
+    s: string,
+    v: number,
+    expectedSigner: string,
+  ): string;
   host_failure_retry_advice(requestKind: string, failure: string): string;
   normalize_decimal(value: string): string;
   parse_http_response_json(
@@ -42,6 +49,8 @@ export interface HyperAxisWasmBindings {
   parse_perp_dexs_response_json(body: string): string;
   parse_perp_meta_and_asset_ctxs_response_json(body: string): string;
   parse_perp_meta_response_json(body: string): string;
+  parse_perp_clearinghouse_state_response_json(body: string): string;
+  parse_spot_clearinghouse_state_response_json(body: string): string;
   parse_websocket_message_json(message: string): string;
   prepare_info_query_json(queryJson: string): string;
   prepare_limit_order_json(
@@ -58,6 +67,7 @@ export interface HyperAxisWasmBindings {
     vaultAddress?: null | string,
     expiresAfter?: null | string,
   ): string;
+  prepare_usd_class_transfer_json(requestJson: string): string;
   prepared_signing_digest(preparedJson: string): string;
   protocol_version(): string;
   snapshot_logs_json(): string;

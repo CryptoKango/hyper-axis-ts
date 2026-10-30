@@ -49,9 +49,11 @@ export const finalize_withdraw_json: (a: number, b: number, c: number, d: number
 export const host_failure_retry_advice: (a: number, b: number, c: number, d: number) => [number, number, number, number];
 export const normalize_decimal: (a: number, b: number) => [number, number, number, number];
 export const parse_http_response_json: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
+export const parse_perp_clearinghouse_state_response_json: (a: number, b: number) => [number, number, number, number];
 export const parse_perp_dexs_response_json: (a: number, b: number) => [number, number, number, number];
 export const parse_perp_meta_and_asset_ctxs_response_json: (a: number, b: number) => [number, number, number, number];
 export const parse_perp_meta_response_json: (a: number, b: number) => [number, number, number, number];
+export const parse_spot_clearinghouse_state_response_json: (a: number, b: number) => [number, number, number, number];
 export const parse_websocket_message_json: (a: number, b: number) => [number, number, number, number];
 export const prepare_agent_enable_dex_abstraction_json: (a: number, b: number) => [number, number, number, number];
 export const prepare_agent_set_abstraction_json: (a: number, b: number) => [number, number, number, number];

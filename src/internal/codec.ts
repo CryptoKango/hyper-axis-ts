@@ -8,6 +8,7 @@ import type {
   HyperAxisFinalizedAction,
   HyperAxisPreparedAction,
 } from '../models/orders.js';
+import type { HyperAxisPreparedUserAction } from '../models/accounts.js';
 import type {
   HyperAxisHttpRequest,
   HyperAxisParsedHttpResponse,
@@ -38,6 +39,19 @@ export function decodePreparedAction(json: string): HyperAxisPreparedAction {
     actionJson: requireString(object, 'actionJson', operation),
     messagePackHex: requireString(object, 'messagePackHex', operation),
     actionHashHex: requireString(object, 'actionHashHex', operation),
+    signingDigestHex: requireString(object, 'signingDigestHex', operation),
+    opaqueJson: json,
+  });
+}
+
+export function decodePreparedUserAction(json: string): HyperAxisPreparedUserAction {
+  const operation = 'prepareUserAction';
+  const object = requireJsonObject(parseJson(json, operation), operation);
+  return Object.freeze({
+    network: requireNetwork(object, operation),
+    action: requireJsonObject(object['action'] ?? null, operation),
+    nonce: requireString(object, 'nonce', operation),
+    actionJson: requireString(object, 'actionJson', operation),
     signingDigestHex: requireString(object, 'signingDigestHex', operation),
     opaqueJson: json,
   });

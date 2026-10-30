@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { HyperAxisClient, HyperAxisError } from '../src/index.js';
 import type { HyperAxisWasmBindings } from '../src/wasm/bindings.js';
-import { createFakeBindings, preparedActionJson } from './fakes.js';
+import {
+  createFakeBindings,
+  preparedActionJson,
+  preparedUserActionJson,
+} from './fakes.js';
 
 describe('HyperAxisClient initialization', () => {
   it('deduplicates concurrent initialization for the same loader', async () => {
@@ -15,12 +19,12 @@ describe('HyperAxisClient initialization', () => {
     ]);
 
     expect(first).toBe(second);
-    expect(first.protocolVersion).toBe('0.2.0');
+    expect(first.protocolVersion).toBe('0.3.0');
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
   it('rejects an incompatible Rust protocol version', async () => {
-    const bindings = createFakeBindings({ protocol_version: () => '0.3.0' });
+    const bindings = createFakeBindings({ protocol_version: () => '0.2.0' });
 
     await expect(
       HyperAxisClient.initialize(() => Promise.resolve(bindings)),
@@ -232,5 +236,92 @@ describe('HyperAxisClient runtime and transport', () => {
     expect(batch.dropped).toBe('2');
     expect(batch.records[0]?.message).toBe('prepared');
     expect(Object.isFrozen(batch.records)).toBe(true);
+  });
+});
+
+describe('HyperAxisClient account flow', () => {
+  it('decodes exact perpetual and spot account responses', async () => {
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(createFakeBindings()),
+    );
+    const perpetual = client.parsePerpAccountState(
+      JSON.stringify({
+        assetPositions: [],
+        crossMaintenanceMarginUsed: '1.25',
+        crossMarginSummary: {
+          accountValue: '100',
+          totalMarginUsed: '20',
+          totalNtlPos: '200',
+          totalRawUsd: '100',
+        },
+        marginSummary: {
+          accountValue: '100',
+          totalMarginUsed: '20',
+          totalNtlPos: '200',
+          totalRawUsd: '100',
+        },
+        time: '1700000000000',
+        withdrawable: '80',
+      }),
+    );
+    const spot = client.parseSpotAccountState(
+      JSON.stringify({
+        balances: [
+          { coin: 'USDC', token: 0, hold: '1', total: '10', entryNtl: '0' },
+        ],
+      }),
+    );
+
+    expect(perpetual.time).toBe('1700000000000');
+    expect(Object.isFrozen(perpetual.assetPositions)).toBe(true);
+    expect(spot.balances[0]?.total).toBe('10');
+  });
+
+  it('prepares and finalizes an exact spot/perp USDC transfer', async () => {
+    const prepare = vi.fn(() => preparedUserActionJson);
+    const finalize = vi.fn(() =>
+      JSON.stringify({
+        endpoint: 'https://api.hyperliquid.xyz/exchange',
+        requestJson: '{}',
+        recoveredSigner: '0x0000000000000000000000000000000000000001',
+      }),
+    );
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(
+        createFakeBindings({
+          prepare_usd_class_transfer_json: prepare,
+          finalize_usd_class_transfer_json: finalize,
+        }),
+      ),
+    );
+    const prepared = client.prepareUsdClassTransfer({
+      network: 'mainnet',
+      amount: '12.5000',
+      toPerp: true,
+      nonce: '1700000000000',
+    });
+    const finalized = client.finalizeUsdClassTransfer({
+      prepared,
+      signature: { r: '0x01', s: '0x02', v: 27 },
+      expectedSigner: '0x0000000000000000000000000000000000000001',
+    });
+
+    expect(prepare).toHaveBeenCalledWith(
+      JSON.stringify({
+        network: 'mainnet',
+        amount: '12.5000',
+        toPerp: true,
+        subAccount: null,
+        nonce: '1700000000000',
+      }),
+    );
+    expect(finalize).toHaveBeenCalledWith(
+      preparedUserActionJson,
+      '0x01',
+      '0x02',
+      27,
+      '0x0000000000000000000000000000000000000001',
+    );
+    expect(finalized.endpoint).toContain('/exchange');
   });
 });

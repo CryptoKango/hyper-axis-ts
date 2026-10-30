@@ -14,7 +14,7 @@ const loader = createHyperAxisWasmLoader({
 });
 const client = await HyperAxisClient.initialize(loader);
 
-if (client.protocolVersion !== '0.2.0') {
+if (client.protocolVersion !== '0.3.0') {
   throw new Error(`Unexpected protocol version: ${client.protocolVersion}`);
 }
 if (client.normalizeDecimal('001.2300') !== '1.23') {
@@ -24,6 +24,36 @@ if (client.normalizeDecimal('001.2300') !== '1.23') {
 const prepared = client.prepareInfoQuery({ type: 'allMids', dex: '' });
 if (prepared.queryType !== 'allMids') {
   throw new Error(`Unexpected Info query type: ${prepared.queryType}`);
+}
+
+const account = client.parsePerpAccountState(
+  '{"assetPositions":[],"crossMaintenanceMarginUsed":"0.0",' +
+    '"crossMarginSummary":{"accountValue":"1","totalMarginUsed":"0",' +
+    '"totalNtlPos":"0","totalRawUsd":"1"},"marginSummary":' +
+    '{"accountValue":"1","totalMarginUsed":"0","totalNtlPos":"0",' +
+    '"totalRawUsd":"1"},"time":1,"withdrawable":"1"}',
+);
+if (account.time !== '1' || account.withdrawable !== '1') {
+  throw new Error('Perpetual account parsing smoke test failed.');
+}
+
+const subscription = client.websocketSubscribe({
+  type: 'clearinghouseState',
+  user: '0x000000000000000000000000000000000000beef',
+  dex: '',
+});
+if (!subscription.includes('clearinghouseState')) {
+  throw new Error('Perpetual account subscription smoke test failed.');
+}
+
+const transfer = client.prepareUsdClassTransfer({
+  network: 'mainnet',
+  amount: '1.25',
+  toPerp: true,
+  nonce: '1234567890000',
+});
+if (transfer.signingDigestHex.length === 0) {
+  throw new Error('USDC class-transfer preparation smoke test failed.');
 }
 
 console.log('HyperAxis Rust WASM smoke test passed.');

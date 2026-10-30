@@ -6,10 +6,22 @@ import {
   decodeLoggingConfig,
   decodeParsedHttpResponse,
   decodePreparedAction,
+  decodePreparedUserAction,
   decodePreparedInfoQuery,
   decodeRetryAdvice,
   decodeWebSocketMessage,
 } from '../internal/codec.js';
+import {
+  decodePerpAccountState,
+  decodeSpotAccountState,
+} from '../internal/account-codec.js';
+import type {
+  HyperAxisFinalizeUserActionRequest,
+  HyperAxisPerpAccountState,
+  HyperAxisPreparedUserAction,
+  HyperAxisSpotAccountState,
+  HyperAxisUsdClassTransferRequest,
+} from '../models/accounts.js';
 import type { HyperAxisNetwork } from '../models/common.js';
 import { type JsonObject, type JsonValue, parseJson, stringifyJson } from '../models/json.js';
 import type {
@@ -196,6 +208,43 @@ export class HyperAxisClient {
     );
   }
 
+  /** Prepares an exact USDC transfer between spot and perpetual balances. */
+  public prepareUsdClassTransfer(
+    request: HyperAxisUsdClassTransferRequest,
+  ): HyperAxisPreparedUserAction {
+    const wireRequest: JsonObject = {
+      network: request.network,
+      amount: request.amount,
+      toPerp: request.toPerp,
+      subAccount: request.subAccount ?? null,
+      nonce: request.nonce,
+    };
+    return this.#invoke('prepareUsdClassTransfer', () =>
+      decodePreparedUserAction(
+        this.#wasm.prepare_usd_class_transfer_json(
+          stringifyJson(wireRequest, 'prepareUsdClassTransfer'),
+        ),
+      ),
+    );
+  }
+
+  /** Verifies and finalizes a prepared spot/perpetual USDC transfer. */
+  public finalizeUsdClassTransfer(
+    request: HyperAxisFinalizeUserActionRequest,
+  ): HyperAxisFinalizedAction {
+    return this.#invoke('finalizeUsdClassTransfer', () =>
+      decodeFinalizedAction(
+        this.#wasm.finalize_usd_class_transfer_json(
+          request.prepared.opaqueJson,
+          request.signature.r,
+          request.signature.s,
+          request.signature.v,
+          request.expectedSigner,
+        ),
+      ),
+    );
+  }
+
   /** Returns the official WebSocket endpoint for a network. */
   public websocketUrl(network: HyperAxisNetwork): string {
     return this.#invoke('websocketUrl', () => this.#wasm.websocket_url(network));
@@ -280,6 +329,24 @@ export class HyperAxisClient {
       parseJson(
         this.#wasm.parse_perp_meta_and_asset_ctxs_response_json(body),
         'parsePerpMetaAndAssetCtxsResponse',
+      ),
+    );
+  }
+
+  /** Validates and decodes a perpetual `clearinghouseState` response. */
+  public parsePerpAccountState(body: string): HyperAxisPerpAccountState {
+    return this.#invoke('parsePerpAccountState', () =>
+      decodePerpAccountState(
+        this.#wasm.parse_perp_clearinghouse_state_response_json(body),
+      ),
+    );
+  }
+
+  /** Validates and decodes a spot `spotClearinghouseState` response. */
+  public parseSpotAccountState(body: string): HyperAxisSpotAccountState {
+    return this.#invoke('parseSpotAccountState', () =>
+      decodeSpotAccountState(
+        this.#wasm.parse_spot_clearinghouse_state_response_json(body),
       ),
     );
   }
