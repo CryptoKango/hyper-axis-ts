@@ -125,6 +125,52 @@ describe('HyperAxisClient order flow', () => {
       }),
     ).toThrow(HyperAxisError);
   });
+
+  it('preserves cancellation OIDs and nonces as exact strings', async () => {
+    const prepare = vi.fn(() => preparedActionJson);
+    const finalize = vi.fn(() =>
+      JSON.stringify({
+        endpoint: 'https://api.hyperliquid.xyz/exchange',
+        requestJson: '{"action":{"type":"cancel"}}',
+        recoveredSigner: '0x0000000000000000000000000000000000000001',
+      }),
+    );
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(
+        createFakeBindings({
+          prepare_cancel_json: prepare,
+          finalize_cancel_json: finalize,
+        }),
+      ),
+    );
+    const prepared = client.prepareCancel({
+      network: 'mainnet',
+      cancels: [{ asset: 3, orderId: '18446744073709551615' }],
+      nonce: '1700000000000',
+    });
+    client.finalizeCancel({
+      prepared,
+      signature: { r: '0x01', s: '0x02', v: 27 },
+      expectedSigner: '0x0000000000000000000000000000000000000001',
+    });
+
+    expect(prepare).toHaveBeenCalledWith(
+      JSON.stringify({
+        network: 'mainnet',
+        cancels: [{ asset: 3, oid: '18446744073709551615' }],
+        nonce: '1700000000000',
+        vaultAddress: null,
+        expiresAfter: null,
+      }),
+    );
+    expect(finalize).toHaveBeenCalledWith(
+      preparedActionJson,
+      '0x01',
+      '0x02',
+      27,
+      '0x0000000000000000000000000000000000000001',
+    );
+  });
 });
 
 describe('HyperAxisClient leverage flow', () => {
@@ -415,5 +461,51 @@ describe('HyperAxisClient account flow', () => {
       '0x0000000000000000000000000000000000000001',
     );
     expect(finalized.endpoint).toContain('/exchange');
+  });
+
+  it('prepares and finalizes an exact bridge withdrawal', async () => {
+    const prepare = vi.fn(() => preparedUserActionJson);
+    const finalize = vi.fn(() =>
+      JSON.stringify({
+        endpoint: 'https://api.hyperliquid.xyz/exchange',
+        requestJson: '{"action":{"type":"withdraw3"}}',
+        recoveredSigner: '0x0000000000000000000000000000000000000001',
+      }),
+    );
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(
+        createFakeBindings({
+          prepare_withdraw_json: prepare,
+          finalize_withdraw_json: finalize,
+        }),
+      ),
+    );
+    const prepared = client.prepareWithdraw({
+      network: 'mainnet',
+      destination: '0x0000000000000000000000000000000000000001',
+      amount: '5.25',
+      nonce: '1700000000000',
+    });
+    client.finalizeWithdraw({
+      prepared,
+      signature: { r: '0x01', s: '0x02', v: 27 },
+      expectedSigner: '0x0000000000000000000000000000000000000001',
+    });
+
+    expect(prepare).toHaveBeenCalledWith(
+      JSON.stringify({
+        network: 'mainnet',
+        destination: '0x0000000000000000000000000000000000000001',
+        amount: '5.25',
+        nonce: '1700000000000',
+      }),
+    );
+    expect(finalize).toHaveBeenCalledWith(
+      preparedUserActionJson,
+      '0x01',
+      '0x02',
+      27,
+      '0x0000000000000000000000000000000000000001',
+    );
   });
 });

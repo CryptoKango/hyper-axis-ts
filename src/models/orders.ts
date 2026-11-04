@@ -1,11 +1,11 @@
-import type { JsonObject } from './json.js';
-import type { HyperAxisNetwork, HyperAxisSignature } from './common.js';
+import type { JsonObject } from "./json.js";
+import type { HyperAxisNetwork, HyperAxisSignature } from "./common.js";
 
 /** Market precision family expected by Rust Core. */
-export type HyperAxisMarketKind = 'perp' | 'spot';
+export type HyperAxisMarketKind = "perp" | "spot";
 
 /** Limit-order time-in-force wire name. */
-export type HyperAxisTimeInForce = 'Alo' | 'Gtc' | 'Ioc';
+export type HyperAxisTimeInForce = "Alo" | "Gtc" | "Ioc";
 
 /** Exact input for preparing one limit order in Rust. */
 export interface HyperAxisLimitOrderRequest {
@@ -13,11 +13,26 @@ export interface HyperAxisLimitOrderRequest {
   readonly asset: number;
   readonly marketKind: HyperAxisMarketKind;
   readonly sizeDecimals: number;
-  readonly side: 'buy' | 'sell';
+  readonly side: "buy" | "sell";
   readonly limitPrice: string;
   readonly size: string;
   readonly reduceOnly?: boolean;
   readonly timeInForce?: HyperAxisTimeInForce;
+  readonly nonce: string;
+  readonly vaultAddress?: string;
+  readonly expiresAfter?: string;
+}
+
+/** One exchange order selected for cancellation by its exact OID. */
+export interface HyperAxisCancelOrder {
+  readonly asset: number;
+  readonly orderId: string;
+}
+
+/** Exact input for preparing one or more order cancellations. */
+export interface HyperAxisCancelRequest {
+  readonly network: HyperAxisNetwork;
+  readonly cancels: readonly HyperAxisCancelOrder[];
   readonly nonce: string;
   readonly vaultAddress?: string;
   readonly expiresAfter?: string;
@@ -53,4 +68,3 @@ export interface HyperAxisFinalizedAction {
   /** Exact Rust JSON accepted by transport helpers. */
   readonly opaqueJson: string;
 }
-

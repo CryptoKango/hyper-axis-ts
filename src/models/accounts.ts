@@ -1,5 +1,5 @@
-import type { HyperAxisNetwork, HyperAxisSignature } from './common.js';
-import type { JsonObject } from './json.js';
+import type { HyperAxisNetwork, HyperAxisSignature } from "./common.js";
+import type { JsonObject } from "./json.js";
 
 /** Aggregate margin totals returned for a perpetual account. */
 export interface HyperAxisPerpMarginSummary {
@@ -75,6 +75,14 @@ export interface HyperAxisUsdClassTransferRequest {
   /** `true` moves spot USDC to perps; `false` moves perps USDC to spot. */
   readonly toPerp: boolean;
   readonly subAccount?: string;
+  readonly nonce: string;
+}
+
+/** Exact input for withdrawing USDC from Hyperliquid to an EVM address. */
+export interface HyperAxisWithdrawRequest {
+  readonly network: HyperAxisNetwork;
+  readonly destination: string;
+  readonly amount: string;
   readonly nonce: string;
 }
 

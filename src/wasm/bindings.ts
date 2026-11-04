@@ -21,11 +21,21 @@ export interface HyperAxisWasmBindings {
   readonly WasmNonceManager: HyperAxisWasmNonceManagerConstructor;
   build_exchange_http_request_json(finalizedJson: string): string;
   build_info_http_request_json(network: string, body: string): string;
-  build_typed_info_http_request_json(network: string, queryJson: string): string;
+  build_typed_info_http_request_json(
+    network: string,
+    queryJson: string,
+  ): string;
   clear_logs(): void;
   configure_logging(enabled: boolean, level: string, capacity: number): string;
   drain_logs_json(): string;
   finalize_order_json(
+    preparedJson: string,
+    r: string,
+    s: string,
+    v: number,
+    expectedSigner: string,
+  ): string;
+  finalize_cancel_json(
     preparedJson: string,
     r: string,
     s: string,
@@ -40,6 +50,13 @@ export interface HyperAxisWasmBindings {
     expectedSigner: string,
   ): string;
   finalize_usd_class_transfer_json(
+    preparedJson: string,
+    r: string,
+    s: string,
+    v: number,
+    expectedSigner: string,
+  ): string;
+  finalize_withdraw_json(
     preparedJson: string,
     r: string,
     s: string,
@@ -74,8 +91,10 @@ export interface HyperAxisWasmBindings {
     vaultAddress?: null | string,
     expiresAfter?: null | string,
   ): string;
+  prepare_cancel_json(requestJson: string): string;
   prepare_update_leverage_json(requestJson: string): string;
   prepare_usd_class_transfer_json(requestJson: string): string;
+  prepare_withdraw_json(requestJson: string): string;
   prepared_signing_digest(preparedJson: string): string;
   protocol_version(): string;
   snapshot_logs_json(): string;
@@ -88,4 +107,3 @@ export interface HyperAxisWasmBindings {
   websocket_unsubscribe_json(subscriptionJson: string): string;
   websocket_url(network: string): string;
 }
-
