@@ -19,7 +19,7 @@ describe('HyperAxisClient initialization', () => {
     ]);
 
     expect(first).toBe(second);
-    expect(first.protocolVersion).toBe('0.3.1');
+    expect(first.protocolVersion).toBe('0.3.2');
     expect(loader).toHaveBeenCalledTimes(1);
   });
 

@@ -92,7 +92,7 @@ export function createFakeBindings(
     prepare_usd_class_transfer_json: () => preparedUserActionJson,
     prepare_withdraw_json: () => preparedUserActionJson,
     prepared_signing_digest: () => `0x${"11".repeat(32)}`,
-    protocol_version: () => "0.3.1",
+    protocol_version: () => "0.3.2",
     snapshot_logs_json: () => JSON.stringify({ dropped: "0", records: [] }),
     validate_exchange_nonce: () => undefined,
     websocket_action_post_json: (id) => JSON.stringify({ id, type: "action" }),
