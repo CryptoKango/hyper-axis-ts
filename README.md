@@ -4,9 +4,9 @@
 
 当前版本：
 
-- TypeScript SDK：`0.3.0`
-- Rust Core：[`v0.3.0`](https://github.com/CryptoKango/hyper-axis/tree/v0.3.0)
-- Rust 固定提交：`d273ded3b69c6c3eb61fb396a2a265a16ff0dfc4`
+- TypeScript SDK：`0.3.1`
+- Rust Core：[`v0.3.1`](https://github.com/CryptoKango/hyper-axis/tree/v0.3.1)
+- Rust 固定提交：`4bd99e0f5c896f27f3a1f9bfa06e4693aa4f0ed2`
 
 ## 架构边界
 
@@ -68,7 +68,7 @@ const loader = createHyperAxisWasmLoader({
 });
 
 const hyperAxis = await HyperAxisClient.initialize(loader);
-console.log(hyperAxis.protocolVersion); // 0.3.0
+console.log(hyperAxis.protocolVersion); // 0.3.1
 ```
 
 同一个 loader 的并发初始化只执行一次。SDK 会拒绝加载协议版本不兼容的 WASM。
@@ -120,6 +120,28 @@ nonceManager.dispose();
 ```
 
 应用必须持久化每个 signer 的 `nonceManager.lastIssued`。网络失败时，签名交易不能盲目重发，应先使用 `hostFailureRetryAdvice()` 的结果执行查询和对账。
+
+## 调整永续杠杆
+
+`maxLeverage` 必须取自当前永续市场元数据；SDK 会在进入 Rust 前拒绝超过市场上限的值。
+
+```ts
+const prepared = hyperAxis.prepareUpdateLeverage({
+  network: 'mainnet',
+  asset: 0,
+  isCross: true,
+  leverage: 20,
+  maxLeverage: 50,
+  nonce: nonceManager.next(Date.now().toString()),
+});
+const signature = await wallet.signDigest(prepared.signingDigestHex);
+const finalized = hyperAxis.finalizeUpdateLeverage({
+  prepared,
+  signature,
+  expectedSigner: wallet.address,
+});
+const request = hyperAxis.buildExchangeHttpRequest(finalized);
+```
 
 ## Info API
 

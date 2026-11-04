@@ -19,7 +19,7 @@ describe('HyperAxisClient initialization', () => {
     ]);
 
     expect(first).toBe(second);
-    expect(first.protocolVersion).toBe('0.3.0');
+    expect(first.protocolVersion).toBe('0.3.1');
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
@@ -124,6 +124,98 @@ describe('HyperAxisClient order flow', () => {
         nonce: '1',
       }),
     ).toThrow(HyperAxisError);
+  });
+});
+
+describe('HyperAxisClient leverage flow', () => {
+  it('serializes exact leverage inputs and preserves the prepared artifact', async () => {
+    const prepare = vi.fn(() => preparedActionJson);
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(
+        createFakeBindings({ prepare_update_leverage_json: prepare }),
+      ),
+    );
+
+    const prepared = client.prepareUpdateLeverage({
+      network: 'mainnet',
+      asset: 4,
+      isCross: false,
+      leverage: 12,
+      maxLeverage: 50,
+      nonce: '1700000000000',
+    });
+
+    expect(prepare).toHaveBeenCalledWith(
+      JSON.stringify({
+        network: 'mainnet',
+        asset: 4,
+        isCross: false,
+        leverage: 12,
+        maxLeverage: 50,
+        nonce: '1700000000000',
+        vaultAddress: null,
+        expiresAfter: null,
+      }),
+    );
+    expect(prepared.opaqueJson).toBe(preparedActionJson);
+  });
+
+  it('passes opaque leverage JSON unchanged into finalization', async () => {
+    const finalize = vi.fn(() =>
+      JSON.stringify({
+        endpoint: 'https://api.hyperliquid.xyz/exchange',
+        requestJson: '{}',
+        recoveredSigner: '0x0000000000000000000000000000000000000001',
+      }),
+    );
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(
+        createFakeBindings({ finalize_update_leverage_json: finalize }),
+      ),
+    );
+    const prepared = client.prepareUpdateLeverage({
+      network: 'mainnet',
+      asset: 4,
+      isCross: true,
+      leverage: 20,
+      maxLeverage: 50,
+      nonce: '1700000000000',
+    });
+
+    client.finalizeUpdateLeverage({
+      prepared,
+      signature: { r: '0x01', s: '0x02', v: 27 },
+      expectedSigner: '0x0000000000000000000000000000000000000001',
+    });
+
+    expect(finalize).toHaveBeenCalledWith(
+      preparedActionJson,
+      '0x01',
+      '0x02',
+      27,
+      '0x0000000000000000000000000000000000000001',
+    );
+  });
+
+  it('rejects leverage above current market metadata before invoking Rust', async () => {
+    const prepare = vi.fn(() => preparedActionJson);
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(
+        createFakeBindings({ prepare_update_leverage_json: prepare }),
+      ),
+    );
+
+    expect(() =>
+      client.prepareUpdateLeverage({
+        network: 'mainnet',
+        asset: 4,
+        isCross: true,
+        leverage: 51,
+        maxLeverage: 50,
+        nonce: '1700000000000',
+      }),
+    ).toThrow(HyperAxisError);
+    expect(prepare).not.toHaveBeenCalled();
   });
 });
 

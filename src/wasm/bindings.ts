@@ -32,6 +32,13 @@ export interface HyperAxisWasmBindings {
     v: number,
     expectedSigner: string,
   ): string;
+  finalize_update_leverage_json(
+    preparedJson: string,
+    r: string,
+    s: string,
+    v: number,
+    expectedSigner: string,
+  ): string;
   finalize_usd_class_transfer_json(
     preparedJson: string,
     r: string,
@@ -67,6 +74,7 @@ export interface HyperAxisWasmBindings {
     vaultAddress?: null | string,
     expiresAfter?: null | string,
   ): string;
+  prepare_update_leverage_json(requestJson: string): string;
   prepare_usd_class_transfer_json(requestJson: string): string;
   prepared_signing_digest(preparedJson: string): string;
   protocol_version(): string;

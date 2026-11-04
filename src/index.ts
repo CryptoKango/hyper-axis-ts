@@ -30,6 +30,7 @@ export type {
   HyperAxisPreparedAction,
   HyperAxisTimeInForce,
 } from './models/orders.js';
+export type { HyperAxisUpdateLeverageRequest } from './models/risk.js';
 export type {
   HyperAxisCandleInterval,
   HyperAxisHostFailureKind,

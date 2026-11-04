@@ -35,6 +35,7 @@ import type {
   HyperAxisLimitOrderRequest,
   HyperAxisPreparedAction,
 } from '../models/orders.js';
+import type { HyperAxisUpdateLeverageRequest } from '../models/risk.js';
 import type {
   HyperAxisHostFailureKind,
   HyperAxisHttpRequest,
@@ -198,6 +199,56 @@ export class HyperAxisClient {
     return this.#invoke('finalizeOrder', () =>
       decodeFinalizedAction(
         this.#wasm.finalize_order_json(
+          request.prepared.opaqueJson,
+          request.signature.r,
+          request.signature.s,
+          request.signature.v,
+          request.expectedSigner,
+        ),
+      ),
+    );
+  }
+
+  /** Validates and prepares one cross/isolated perpetual leverage update. */
+  public prepareUpdateLeverage(
+    request: HyperAxisUpdateLeverageRequest,
+  ): HyperAxisPreparedAction {
+    requireIntegerInRange(request.asset, 0, UINT32_MAX, 'asset');
+    requireIntegerInRange(request.leverage, 1, UINT32_MAX, 'leverage');
+    requireIntegerInRange(request.maxLeverage, 1, UINT32_MAX, 'maxLeverage');
+    if (request.leverage > request.maxLeverage) {
+      throw new HyperAxisError({
+        code: 'invalidArgument',
+        message: 'leverage must not exceed maxLeverage.',
+        operation: 'validateArgument',
+      });
+    }
+    const wireRequest: JsonObject = {
+      network: request.network,
+      asset: request.asset,
+      isCross: request.isCross,
+      leverage: request.leverage,
+      maxLeverage: request.maxLeverage,
+      nonce: request.nonce,
+      vaultAddress: request.vaultAddress ?? null,
+      expiresAfter: request.expiresAfter ?? null,
+    };
+    return this.#invoke('prepareUpdateLeverage', () =>
+      decodePreparedAction(
+        this.#wasm.prepare_update_leverage_json(
+          stringifyJson(wireRequest, 'prepareUpdateLeverage'),
+        ),
+      ),
+    );
+  }
+
+  /** Verifies the wallet signature and finalizes a leverage update in Rust. */
+  public finalizeUpdateLeverage(
+    request: HyperAxisFinalizeRequest,
+  ): HyperAxisFinalizedAction {
+    return this.#invoke('finalizeUpdateLeverage', () =>
+      decodeFinalizedAction(
+        this.#wasm.finalize_update_leverage_json(
           request.prepared.opaqueJson,
           request.signature.r,
           request.signature.s,

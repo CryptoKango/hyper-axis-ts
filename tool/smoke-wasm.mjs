@@ -14,7 +14,7 @@ const loader = createHyperAxisWasmLoader({
 });
 const client = await HyperAxisClient.initialize(loader);
 
-if (client.protocolVersion !== '0.3.0') {
+if (client.protocolVersion !== '0.3.1') {
   throw new Error(`Unexpected protocol version: ${client.protocolVersion}`);
 }
 if (client.normalizeDecimal('001.2300') !== '1.23') {
@@ -54,6 +54,18 @@ const transfer = client.prepareUsdClassTransfer({
 });
 if (transfer.signingDigestHex.length === 0) {
   throw new Error('USDC class-transfer preparation smoke test failed.');
+}
+
+const leverage = client.prepareUpdateLeverage({
+  network: 'mainnet',
+  asset: 4,
+  isCross: false,
+  leverage: 12,
+  maxLeverage: 50,
+  nonce: '1234567890000',
+});
+if (leverage.action.type !== 'updateLeverage') {
+  throw new Error('Leverage-update preparation smoke test failed.');
 }
 
 console.log('HyperAxis Rust WASM smoke test passed.');
