@@ -13,3 +13,15 @@ export interface HyperAxisUpdateLeverageRequest {
   readonly vaultAddress?: string;
   readonly expiresAfter?: string;
 }
+
+/** Exact input for adding or removing isolated-position USD margin. */
+export interface HyperAxisUpdateIsolatedMarginRequest {
+  readonly network: HyperAxisNetwork;
+  readonly asset: number;
+  readonly isBuy: boolean;
+  /** Signed exact USD delta with at most six fractional digits. */
+  readonly usdDelta: string;
+  readonly nonce: string;
+  readonly vaultAddress?: string;
+  readonly expiresAfter?: string;
+}

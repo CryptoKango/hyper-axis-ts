@@ -55,6 +55,12 @@ export function createFakeBindings(
         requestJson: '{"action":{}}',
         recoveredSigner: "0x0000000000000000000000000000000000000001",
       }),
+    finalize_update_isolated_margin_json: () =>
+      JSON.stringify({
+        endpoint: "https://api.hyperliquid.xyz/exchange",
+        requestJson: '{"action":{}}',
+        recoveredSigner: "0x0000000000000000000000000000000000000001",
+      }),
     finalize_usd_class_transfer_json: () =>
       JSON.stringify({
         endpoint: "https://api.hyperliquid.xyz/exchange",
@@ -94,12 +100,14 @@ export function createFakeBindings(
       JSON.stringify({ queryType: "allMids", body: '{"type":"allMids"}' }),
     prepare_limit_order_json: () => preparedActionJson,
     prepare_cancel_json: () => preparedActionJson,
+    prepare_orders_json: () => preparedActionJson,
     prepare_update_leverage_json: () => preparedActionJson,
+    prepare_update_isolated_margin_json: () => preparedActionJson,
     prepare_usd_class_transfer_json: () => preparedUserActionJson,
     prepare_withdraw_json: () => preparedUserActionJson,
     prepare_approve_builder_fee_json: () => preparedUserActionJson,
     prepared_signing_digest: () => `0x${"11".repeat(32)}`,
-    protocol_version: () => "0.3.4",
+    protocol_version: () => "0.3.5",
     snapshot_logs_json: () => JSON.stringify({ dropped: "0", records: [] }),
     validate_exchange_nonce: () => undefined,
     websocket_action_post_json: (id) => JSON.stringify({ id, type: "action" }),

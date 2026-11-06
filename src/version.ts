@@ -1,5 +1,5 @@
 /** Version of the TypeScript package. */
-export const hyperAxisTsVersion = '0.5.1';
+export const hyperAxisTsVersion = '0.5.2';
 
 /** Rust protocol version required by this TypeScript facade. */
-export const hyperAxisRustProtocolVersion = '0.3.4';
+export const hyperAxisRustProtocolVersion = '0.3.5';

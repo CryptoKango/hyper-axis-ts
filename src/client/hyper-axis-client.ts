@@ -42,8 +42,12 @@ import type {
   HyperAxisFinalizeRequest,
   HyperAxisLimitOrderRequest,
   HyperAxisPreparedAction,
+  HyperAxisTriggerOrdersRequest,
 } from "../models/orders.js";
-import type { HyperAxisUpdateLeverageRequest } from "../models/risk.js";
+import type {
+  HyperAxisUpdateIsolatedMarginRequest,
+  HyperAxisUpdateLeverageRequest,
+} from "../models/risk.js";
 import type {
   HyperAxisHostFailureKind,
   HyperAxisHttpRequest,
@@ -232,6 +236,69 @@ export class HyperAxisClient {
     );
   }
 
+  /** Validates and prepares one or more take-profit/stop-loss orders. */
+  public prepareTriggerOrders(
+    request: HyperAxisTriggerOrdersRequest,
+  ): HyperAxisPreparedAction {
+    if (request.orders.length === 0) {
+      throw new HyperAxisError({
+        code: "invalidArgument",
+        message: "orders must not be empty.",
+        operation: "validateArgument",
+      });
+    }
+    if (request.builder !== undefined) {
+      requireIntegerInRange(request.builder.fee, 0, UINT32_MAX, "builder.fee");
+    }
+    const orders = request.orders.map((order) => {
+      requireIntegerInRange(order.asset, 0, UINT32_MAX, "asset");
+      requireIntegerInRange(order.sizeDecimals, 0, UINT8_MAX, "sizeDecimals");
+      return {
+        kind: "trigger",
+        asset: order.asset,
+        marketKind: order.marketKind,
+        szDecimals: order.sizeDecimals,
+        isBuy: order.side === "buy",
+        limitPrice: order.limitPrice,
+        triggerPrice: order.triggerPrice,
+        size: order.size,
+        reduceOnly: order.reduceOnly,
+        isMarket: order.isMarket,
+        triggerKind: order.triggerKind,
+        clientOrderId: order.clientOrderId ?? null,
+      };
+    });
+    const wireRequest: JsonObject = {
+      network: request.network,
+      orders,
+      grouping: request.grouping,
+      builder:
+        request.builder === undefined
+          ? null
+          : {
+              address: request.builder.address,
+              fee: request.builder.fee,
+            },
+      nonce: request.nonce,
+      vaultAddress: request.vaultAddress ?? null,
+      expiresAfter: request.expiresAfter ?? null,
+    };
+    return this.#invoke("prepareTriggerOrders", () =>
+      decodePreparedAction(
+        this.#wasm.prepare_orders_json(
+          stringifyJson(wireRequest, "prepareTriggerOrders"),
+        ),
+      ),
+    );
+  }
+
+  /** Verifies and finalizes a prepared conditional-order action. */
+  public finalizeTriggerOrders(
+    request: HyperAxisFinalizeRequest,
+  ): HyperAxisFinalizedAction {
+    return this.finalizeOrder(request);
+  }
+
   /** Validates and prepares one or more cancellations for host-wallet signing. */
   public prepareCancel(
     request: HyperAxisCancelRequest,
@@ -321,6 +388,46 @@ export class HyperAxisClient {
     return this.#invoke("finalizeUpdateLeverage", () =>
       decodeFinalizedAction(
         this.#wasm.finalize_update_leverage_json(
+          request.prepared.opaqueJson,
+          request.signature.r,
+          request.signature.s,
+          request.signature.v,
+          request.expectedSigner,
+        ),
+      ),
+    );
+  }
+
+  /** Validates and prepares an isolated-position margin adjustment. */
+  public prepareUpdateIsolatedMargin(
+    request: HyperAxisUpdateIsolatedMarginRequest,
+  ): HyperAxisPreparedAction {
+    requireIntegerInRange(request.asset, 0, UINT32_MAX, "asset");
+    const wireRequest: JsonObject = {
+      network: request.network,
+      asset: request.asset,
+      isBuy: request.isBuy,
+      usdDelta: request.usdDelta,
+      nonce: request.nonce,
+      vaultAddress: request.vaultAddress ?? null,
+      expiresAfter: request.expiresAfter ?? null,
+    };
+    return this.#invoke("prepareUpdateIsolatedMargin", () =>
+      decodePreparedAction(
+        this.#wasm.prepare_update_isolated_margin_json(
+          stringifyJson(wireRequest, "prepareUpdateIsolatedMargin"),
+        ),
+      ),
+    );
+  }
+
+  /** Verifies and finalizes an isolated-position margin adjustment. */
+  public finalizeUpdateIsolatedMargin(
+    request: HyperAxisFinalizeRequest,
+  ): HyperAxisFinalizedAction {
+    return this.#invoke("finalizeUpdateIsolatedMargin", () =>
+      decodeFinalizedAction(
+        this.#wasm.finalize_update_isolated_margin_json(
           request.prepared.opaqueJson,
           request.signature.r,
           request.signature.s,

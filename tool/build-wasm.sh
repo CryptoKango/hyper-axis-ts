@@ -2,8 +2,8 @@
 set -euo pipefail
 
 readonly CORE_REPOSITORY="https://github.com/CryptoKango/hyper-axis.git"
-readonly CORE_TAG="v0.3.4"
-readonly CORE_COMMIT="30938dc352433320e2e302f3d67e9491adeea958"
+readonly CORE_TAG="v0.3.5"
+readonly CORE_COMMIT="68a5d2a24aa3f48b55f649c0094b30956af2acc0"
 readonly RUST_VERSION="1.99.1"
 readonly WASM_BINDGEN_VERSION="0.2.129"
 

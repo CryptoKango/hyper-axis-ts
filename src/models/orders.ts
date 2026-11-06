@@ -7,6 +7,12 @@ export type HyperAxisMarketKind = "perp" | "spot";
 /** Limit-order time-in-force wire name. */
 export type HyperAxisTimeInForce = "Alo" | "Gtc" | "Ioc";
 
+/** Grouping mode for an atomic Hyperliquid order action. */
+export type HyperAxisOrderGrouping = "na" | "normalTpsl" | "positionTpsl";
+
+/** Trigger classification used by Hyperliquid conditional orders. */
+export type HyperAxisTriggerKind = "tp" | "sl";
+
 /** Builder code attached to an order. Fee is expressed in tenths of a basis point. */
 export interface HyperAxisBuilderFee {
   readonly address: string;
@@ -28,6 +34,32 @@ export interface HyperAxisLimitOrderRequest {
   readonly vaultAddress?: string;
   readonly expiresAfter?: string;
   readonly builder?: HyperAxisBuilderFee;
+}
+
+/** One take-profit or stop-loss order prepared by Rust Core. */
+export interface HyperAxisTriggerOrderInput {
+  readonly asset: number;
+  readonly marketKind: HyperAxisMarketKind;
+  readonly sizeDecimals: number;
+  readonly side: "buy" | "sell";
+  readonly limitPrice: string;
+  readonly triggerPrice: string;
+  readonly size: string;
+  readonly reduceOnly: boolean;
+  readonly isMarket: boolean;
+  readonly triggerKind: HyperAxisTriggerKind;
+  readonly clientOrderId?: string;
+}
+
+/** Exact input for preparing one or more conditional orders atomically. */
+export interface HyperAxisTriggerOrdersRequest {
+  readonly network: HyperAxisNetwork;
+  readonly orders: readonly HyperAxisTriggerOrderInput[];
+  readonly grouping: HyperAxisOrderGrouping;
+  readonly nonce: string;
+  readonly builder?: HyperAxisBuilderFee;
+  readonly vaultAddress?: string;
+  readonly expiresAfter?: string;
 }
 
 /** One exchange order selected for cancellation by its exact OID. */

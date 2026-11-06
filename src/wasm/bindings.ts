@@ -49,6 +49,13 @@ export interface HyperAxisWasmBindings {
     v: number,
     expectedSigner: string,
   ): string;
+  finalize_update_isolated_margin_json(
+    preparedJson: string,
+    r: string,
+    s: string,
+    v: number,
+    expectedSigner: string,
+  ): string;
   finalize_usd_class_transfer_json(
     preparedJson: string,
     r: string,
@@ -101,7 +108,9 @@ export interface HyperAxisWasmBindings {
     expiresAfter?: null | string,
   ): string;
   prepare_cancel_json(requestJson: string): string;
+  prepare_orders_json(requestJson: string): string;
   prepare_update_leverage_json(requestJson: string): string;
+  prepare_update_isolated_margin_json(requestJson: string): string;
   prepare_usd_class_transfer_json(requestJson: string): string;
   prepare_withdraw_json(requestJson: string): string;
   prepare_approve_builder_fee_json(requestJson: string): string;

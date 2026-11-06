@@ -4,9 +4,9 @@
 
 当前版本：
 
-- TypeScript SDK：`0.5.1`
-- Rust Core：[`v0.3.4`](https://github.com/CryptoKango/hyper-axis/tree/v0.3.4)
-- Rust 固定提交：`30938dc352433320e2e302f3d67e9491adeea958`
+- TypeScript SDK：`0.5.2`
+- Rust Core：[`v0.3.5`](https://github.com/CryptoKango/hyper-axis/tree/v0.3.5)
+- Rust 固定提交：`68a5d2a24aa3f48b55f649c0094b30956af2acc0`
 
 ## 架构边界
 
@@ -68,7 +68,7 @@ const loader = createHyperAxisWasmLoader({
 });
 
 const hyperAxis = await HyperAxisClient.initialize(loader);
-console.log(hyperAxis.protocolVersion); // 0.3.4
+console.log(hyperAxis.protocolVersion); // 0.3.5
 ```
 
 同一个 loader 的并发初始化只执行一次。SDK 会拒绝加载协议版本不兼容的 WASM。

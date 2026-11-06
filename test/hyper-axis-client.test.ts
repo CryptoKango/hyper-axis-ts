@@ -19,7 +19,7 @@ describe('HyperAxisClient initialization', () => {
     ]);
 
     expect(first).toBe(second);
-    expect(first.protocolVersion).toBe('0.3.4');
+    expect(first.protocolVersion).toBe('0.3.5');
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
@@ -212,6 +212,61 @@ describe('HyperAxisClient order flow', () => {
       '0x0000000000000000000000000000000000000001',
     );
   });
+
+  it('serializes trigger orders with exact conditional-order fields', async () => {
+    const prepare = vi.fn(() => preparedActionJson);
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(createFakeBindings({ prepare_orders_json: prepare })),
+    );
+
+    client.prepareTriggerOrders({
+      network: 'mainnet',
+      orders: [
+        {
+          asset: 0,
+          marketKind: 'perp',
+          sizeDecimals: 5,
+          side: 'sell',
+          limitPrice: '95',
+          triggerPrice: '96',
+          size: '0.01',
+          reduceOnly: true,
+          isMarket: true,
+          triggerKind: 'sl',
+          clientOrderId: '0x00000000000000000000000000000001',
+        },
+      ],
+      grouping: 'positionTpsl',
+      nonce: '1700000000000',
+    });
+
+    expect(prepare).toHaveBeenCalledWith(
+      JSON.stringify({
+        network: 'mainnet',
+        orders: [
+          {
+            kind: 'trigger',
+            asset: 0,
+            marketKind: 'perp',
+            szDecimals: 5,
+            isBuy: false,
+            limitPrice: '95',
+            triggerPrice: '96',
+            size: '0.01',
+            reduceOnly: true,
+            isMarket: true,
+            triggerKind: 'sl',
+            clientOrderId: '0x00000000000000000000000000000001',
+          },
+        ],
+        grouping: 'positionTpsl',
+        builder: null,
+        nonce: '1700000000000',
+        vaultAddress: null,
+        expiresAfter: null,
+      }),
+    );
+  });
 });
 
 describe('HyperAxisClient leverage flow', () => {
@@ -303,6 +358,57 @@ describe('HyperAxisClient leverage flow', () => {
       }),
     ).toThrow(HyperAxisError);
     expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it('preserves an exact signed isolated-margin delta', async () => {
+    const prepare = vi.fn(() => preparedActionJson);
+    const finalize = vi.fn(() =>
+      JSON.stringify({
+        endpoint: 'https://api.hyperliquid.xyz/exchange',
+        requestJson: '{}',
+        recoveredSigner: '0x0000000000000000000000000000000000000001',
+      }),
+    );
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(
+        createFakeBindings({
+          prepare_update_isolated_margin_json: prepare,
+          finalize_update_isolated_margin_json: finalize,
+        }),
+      ),
+    );
+
+    const prepared = client.prepareUpdateIsolatedMargin({
+      network: 'mainnet',
+      asset: 4,
+      isBuy: true,
+      usdDelta: '-12.345678',
+      nonce: '1700000000000',
+    });
+    client.finalizeUpdateIsolatedMargin({
+      prepared,
+      signature: { r: '0x01', s: '0x02', v: 27 },
+      expectedSigner: '0x0000000000000000000000000000000000000001',
+    });
+
+    expect(prepare).toHaveBeenCalledWith(
+      JSON.stringify({
+        network: 'mainnet',
+        asset: 4,
+        isBuy: true,
+        usdDelta: '-12.345678',
+        nonce: '1700000000000',
+        vaultAddress: null,
+        expiresAfter: null,
+      }),
+    );
+    expect(finalize).toHaveBeenCalledWith(
+      preparedActionJson,
+      '0x01',
+      '0x02',
+      27,
+      '0x0000000000000000000000000000000000000001',
+    );
   });
 });
 

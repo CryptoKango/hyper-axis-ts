@@ -32,10 +32,17 @@ export type {
   HyperAxisFinalizeRequest,
   HyperAxisLimitOrderRequest,
   HyperAxisMarketKind,
+  HyperAxisOrderGrouping,
   HyperAxisPreparedAction,
   HyperAxisTimeInForce,
+  HyperAxisTriggerKind,
+  HyperAxisTriggerOrderInput,
+  HyperAxisTriggerOrdersRequest,
 } from "./models/orders.js";
-export type { HyperAxisUpdateLeverageRequest } from "./models/risk.js";
+export type {
+  HyperAxisUpdateIsolatedMarginRequest,
+  HyperAxisUpdateLeverageRequest,
+} from "./models/risk.js";
 export type {
   HyperAxisCandleInterval,
   HyperAxisHostFailureKind,
