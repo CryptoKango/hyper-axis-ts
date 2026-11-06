@@ -63,6 +63,13 @@ export interface HyperAxisWasmBindings {
     v: number,
     expectedSigner: string,
   ): string;
+  finalize_approve_builder_fee_json(
+    preparedJson: string,
+    r: string,
+    s: string,
+    v: number,
+    expectedSigner: string,
+  ): string;
   host_failure_retry_advice(requestKind: string, failure: string): string;
   normalize_decimal(value: string): string;
   parse_http_response_json(
@@ -90,11 +97,14 @@ export interface HyperAxisWasmBindings {
     nonce: string,
     vaultAddress?: null | string,
     expiresAfter?: null | string,
+    builderAddress?: null | string,
+    builderFee?: null | number,
   ): string;
   prepare_cancel_json(requestJson: string): string;
   prepare_update_leverage_json(requestJson: string): string;
   prepare_usd_class_transfer_json(requestJson: string): string;
   prepare_withdraw_json(requestJson: string): string;
+  prepare_approve_builder_fee_json(requestJson: string): string;
   prepared_signing_digest(preparedJson: string): string;
   protocol_version(): string;
   snapshot_logs_json(): string;

@@ -86,6 +86,15 @@ export interface HyperAxisWithdrawRequest {
   readonly nonce: string;
 }
 
+/** Exact input for approving a maximum Builder Fee for one builder address. */
+export interface HyperAxisApproveBuilderFeeRequest {
+  readonly network: HyperAxisNetwork;
+  readonly builder: string;
+  /** Exact percentage string accepted by Hyperliquid, for example `0.1%`. */
+  readonly maxFeeRate: string;
+  readonly nonce: string;
+}
+
 /** Rust-validated user action awaiting a host-wallet signature. */
 export interface HyperAxisPreparedUserAction {
   readonly network: HyperAxisNetwork;

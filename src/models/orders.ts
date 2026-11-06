@@ -7,6 +7,12 @@ export type HyperAxisMarketKind = "perp" | "spot";
 /** Limit-order time-in-force wire name. */
 export type HyperAxisTimeInForce = "Alo" | "Gtc" | "Ioc";
 
+/** Builder code attached to an order. Fee is expressed in tenths of a basis point. */
+export interface HyperAxisBuilderFee {
+  readonly address: string;
+  readonly fee: number;
+}
+
 /** Exact input for preparing one limit order in Rust. */
 export interface HyperAxisLimitOrderRequest {
   readonly network: HyperAxisNetwork;
@@ -21,6 +27,7 @@ export interface HyperAxisLimitOrderRequest {
   readonly nonce: string;
   readonly vaultAddress?: string;
   readonly expiresAfter?: string;
+  readonly builder?: HyperAxisBuilderFee;
 }
 
 /** One exchange order selected for cancellation by its exact OID. */

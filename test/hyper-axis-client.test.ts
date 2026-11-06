@@ -65,9 +65,50 @@ describe('HyperAxisClient order flow', () => {
       '1700000000000',
       null,
       null,
+      null,
+      null,
     );
     expect(prepared.opaqueJson).toBe(preparedActionJson);
     expect(prepared.signingDigestHex).toHaveLength(66);
+  });
+
+  it('passes a validated Builder Fee to Rust', async () => {
+    const prepare = vi.fn(() => preparedActionJson);
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(createFakeBindings({ prepare_limit_order_json: prepare })),
+    );
+
+    client.prepareLimitOrder({
+      network: 'mainnet',
+      asset: 0,
+      marketKind: 'perp',
+      sizeDecimals: 5,
+      side: 'sell',
+      limitPrice: '3500.25',
+      size: '0.01',
+      nonce: '1700000000000',
+      builder: {
+        address: '0x0000000000000000000000000000000000000002',
+        fee: 100,
+      },
+    });
+
+    expect(prepare).toHaveBeenCalledWith(
+      'mainnet',
+      0,
+      'perp',
+      5,
+      'sell',
+      '3500.25',
+      '0.01',
+      false,
+      'Gtc',
+      '1700000000000',
+      null,
+      null,
+      '0x0000000000000000000000000000000000000002',
+      100,
+    );
   });
 
   it('passes opaque Rust JSON unchanged into finalization', async () => {
@@ -497,6 +538,52 @@ describe('HyperAxisClient account flow', () => {
         network: 'mainnet',
         destination: '0x0000000000000000000000000000000000000001',
         amount: '5.25',
+        nonce: '1700000000000',
+      }),
+    );
+    expect(finalize).toHaveBeenCalledWith(
+      preparedUserActionJson,
+      '0x01',
+      '0x02',
+      27,
+      '0x0000000000000000000000000000000000000001',
+    );
+  });
+
+  it('prepares and finalizes a Builder Fee approval', async () => {
+    const prepare = vi.fn(() => preparedUserActionJson);
+    const finalize = vi.fn(() =>
+      JSON.stringify({
+        endpoint: 'https://api.hyperliquid.xyz/exchange',
+        requestJson: '{"action":{"type":"approveBuilderFee"}}',
+        recoveredSigner: '0x0000000000000000000000000000000000000001',
+      }),
+    );
+    const client = await HyperAxisClient.initialize(() =>
+      Promise.resolve(
+        createFakeBindings({
+          prepare_approve_builder_fee_json: prepare,
+          finalize_approve_builder_fee_json: finalize,
+        }),
+      ),
+    );
+    const prepared = client.prepareApproveBuilderFee({
+      network: 'mainnet',
+      builder: '0x0000000000000000000000000000000000000002',
+      maxFeeRate: '0.1%',
+      nonce: '1700000000000',
+    });
+    client.finalizeApproveBuilderFee({
+      prepared,
+      signature: { r: '0x01', s: '0x02', v: 27 },
+      expectedSigner: '0x0000000000000000000000000000000000000001',
+    });
+
+    expect(prepare).toHaveBeenCalledWith(
+      JSON.stringify({
+        network: 'mainnet',
+        builder: '0x0000000000000000000000000000000000000002',
+        maxFeeRate: '0.1%',
         nonce: '1700000000000',
       }),
     );

@@ -19,6 +19,7 @@ import type {
   HyperAxisFinalizeUserActionRequest,
   HyperAxisPerpAccountState,
   HyperAxisPreparedUserAction,
+  HyperAxisApproveBuilderFeeRequest,
   HyperAxisSpotAccountState,
   HyperAxisUsdClassTransferRequest,
   HyperAxisWithdrawRequest,
@@ -182,6 +183,9 @@ export class HyperAxisClient {
   ): HyperAxisPreparedAction {
     requireIntegerInRange(request.asset, 0, UINT32_MAX, "asset");
     requireIntegerInRange(request.sizeDecimals, 0, UINT8_MAX, "sizeDecimals");
+    if (request.builder !== undefined) {
+      requireIntegerInRange(request.builder.fee, 0, UINT32_MAX, "builder.fee");
+    }
     return this.#invoke("prepareLimitOrder", () =>
       decodePreparedAction(
         this.#wasm.prepare_limit_order_json(
@@ -197,6 +201,8 @@ export class HyperAxisClient {
           request.nonce,
           request.vaultAddress ?? null,
           request.expiresAfter ?? null,
+          request.builder?.address ?? null,
+          request.builder?.fee ?? null,
         ),
       ),
     );
@@ -388,6 +394,42 @@ export class HyperAxisClient {
     return this.#invoke("finalizeWithdraw", () =>
       decodeFinalizedAction(
         this.#wasm.finalize_withdraw_json(
+          request.prepared.opaqueJson,
+          request.signature.r,
+          request.signature.s,
+          request.signature.v,
+          request.expectedSigner,
+        ),
+      ),
+    );
+  }
+
+  /** Prepares a maximum Builder Fee approval for host-wallet signing. */
+  public prepareApproveBuilderFee(
+    request: HyperAxisApproveBuilderFeeRequest,
+  ): HyperAxisPreparedUserAction {
+    const wireRequest: JsonObject = {
+      network: request.network,
+      builder: request.builder,
+      maxFeeRate: request.maxFeeRate,
+      nonce: request.nonce,
+    };
+    return this.#invoke("prepareApproveBuilderFee", () =>
+      decodePreparedUserAction(
+        this.#wasm.prepare_approve_builder_fee_json(
+          stringifyJson(wireRequest, "prepareApproveBuilderFee"),
+        ),
+      ),
+    );
+  }
+
+  /** Verifies and finalizes a prepared maximum Builder Fee approval. */
+  public finalizeApproveBuilderFee(
+    request: HyperAxisFinalizeUserActionRequest,
+  ): HyperAxisFinalizedAction {
+    return this.#invoke("finalizeApproveBuilderFee", () =>
+      decodeFinalizedAction(
+        this.#wasm.finalize_approve_builder_fee_json(
           request.prepared.opaqueJson,
           request.signature.r,
           request.signature.s,

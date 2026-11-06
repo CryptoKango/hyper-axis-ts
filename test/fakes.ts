@@ -67,6 +67,12 @@ export function createFakeBindings(
         requestJson: '{"action":{"type":"withdraw3"}}',
         recoveredSigner: "0x0000000000000000000000000000000000000001",
       }),
+    finalize_approve_builder_fee_json: () =>
+      JSON.stringify({
+        endpoint: "https://api.hyperliquid.xyz/exchange",
+        requestJson: '{"action":{"type":"approveBuilderFee"}}',
+        recoveredSigner: "0x0000000000000000000000000000000000000001",
+      }),
     host_failure_retry_advice: () => JSON.stringify("safeAfterBackoff"),
     normalize_decimal: (value) => value,
     parse_http_response_json: (requestKind, statusCode) =>
@@ -91,6 +97,7 @@ export function createFakeBindings(
     prepare_update_leverage_json: () => preparedActionJson,
     prepare_usd_class_transfer_json: () => preparedUserActionJson,
     prepare_withdraw_json: () => preparedUserActionJson,
+    prepare_approve_builder_fee_json: () => preparedUserActionJson,
     prepared_signing_digest: () => `0x${"11".repeat(32)}`,
     protocol_version: () => "0.3.2",
     snapshot_logs_json: () => JSON.stringify({ dropped: "0", records: [] }),

@@ -3,6 +3,7 @@ export { HyperAxisError, type HyperAxisErrorCode } from "./error.js";
 export type { HyperAxisNetwork, HyperAxisSignature } from "./models/common.js";
 export type {
   HyperAxisFinalizeUserActionRequest,
+  HyperAxisApproveBuilderFeeRequest,
   HyperAxisPerpAccountState,
   HyperAxisPerpAssetPosition,
   HyperAxisPerpCumulativeFunding,
@@ -25,6 +26,7 @@ export type {
 } from "./models/logging.js";
 export type {
   HyperAxisFinalizedAction,
+  HyperAxisBuilderFee,
   HyperAxisCancelOrder,
   HyperAxisCancelRequest,
   HyperAxisFinalizeRequest,
