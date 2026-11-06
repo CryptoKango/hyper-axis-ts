@@ -2715,13 +2715,15 @@ export function prepare_info_query_json(query_json) {
  * @param {boolean} reduce_only
  * @param {string} time_in_force
  * @param {string} nonce
+ * @param {string | null} [builder_address]
+ * @param {number | null} [builder_fee]
  * @param {string | null} [vault_address]
  * @param {string | null} [expires_after]
  * @returns {string}
  */
-export function prepare_limit_order_json(network, asset, market_kind, sz_decimals, side, limit_price, order_size, reduce_only, time_in_force, nonce, vault_address, expires_after) {
-    let deferred11_0;
-    let deferred11_1;
+export function prepare_limit_order_json(network, asset, market_kind, sz_decimals, side, limit_price, order_size, reduce_only, time_in_force, nonce, builder_address, builder_fee, vault_address, expires_after) {
+    let deferred12_0;
+    let deferred12_1;
     try {
         const ptr0 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
@@ -2737,22 +2739,24 @@ export function prepare_limit_order_json(network, asset, market_kind, sz_decimal
         const len5 = WASM_VECTOR_LEN;
         const ptr6 = passStringToWasm0(nonce, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len6 = WASM_VECTOR_LEN;
-        var ptr7 = isLikeNone(vault_address) ? 0 : passStringToWasm0(vault_address, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var ptr7 = isLikeNone(builder_address) ? 0 : passStringToWasm0(builder_address, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         var len7 = WASM_VECTOR_LEN;
-        var ptr8 = isLikeNone(expires_after) ? 0 : passStringToWasm0(expires_after, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var ptr8 = isLikeNone(vault_address) ? 0 : passStringToWasm0(vault_address, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         var len8 = WASM_VECTOR_LEN;
-        const ret = wasm.prepare_limit_order_json(ptr0, len0, asset, ptr1, len1, sz_decimals, ptr2, len2, ptr3, len3, ptr4, len4, reduce_only, ptr5, len5, ptr6, len6, ptr7, len7, ptr8, len8);
-        var ptr10 = ret[0];
-        var len10 = ret[1];
+        var ptr9 = isLikeNone(expires_after) ? 0 : passStringToWasm0(expires_after, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len9 = WASM_VECTOR_LEN;
+        const ret = wasm.prepare_limit_order_json(ptr0, len0, asset, ptr1, len1, sz_decimals, ptr2, len2, ptr3, len3, ptr4, len4, reduce_only, ptr5, len5, ptr6, len6, ptr7, len7, isLikeNone(builder_fee) ? Number.MAX_SAFE_INTEGER : (builder_fee) >>> 0, ptr8, len8, ptr9, len9);
+        var ptr11 = ret[0];
+        var len11 = ret[1];
         if (ret[3]) {
-            ptr10 = 0; len10 = 0;
+            ptr11 = 0; len11 = 0;
             throw takeFromExternrefTable0(ret[2]);
         }
-        deferred11_0 = ptr10;
-        deferred11_1 = len10;
-        return getStringFromWasm0(ptr10, len10);
+        deferred12_0 = ptr11;
+        deferred12_1 = len11;
+        return getStringFromWasm0(ptr11, len11);
     } finally {
-        wasm.__wbindgen_free(deferred11_0, deferred11_1, 1);
+        wasm.__wbindgen_free(deferred12_0, deferred12_1, 1);
     }
 }
 

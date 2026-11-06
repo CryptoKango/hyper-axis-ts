@@ -61,7 +61,7 @@ export type HyperAxisOrderStatusSelector =
   | { readonly kind: 'oid'; readonly oid: string };
 
 /**
- * Complete typed Info API request surface exposed by Rust Core v0.3.2.
+ * Complete typed Info API request surface exposed by Rust Core v0.3.3.
  * Wide integers are decimal strings and become JSON numbers only inside Rust.
  */
 export type HyperAxisInfoQuery =
@@ -109,7 +109,7 @@ export interface HyperAxisPreparedInfoQuery {
   readonly body: string;
 }
 
-/** Complete WebSocket subscription surface exposed by Rust Core v0.3.2. */
+/** Complete WebSocket subscription surface exposed by Rust Core v0.3.3. */
 export type HyperAxisSubscription =
   | { readonly type: 'activeAssetCtx'; readonly coin: string }
   | { readonly type: 'activeAssetData'; readonly user: string; readonly coin: string }

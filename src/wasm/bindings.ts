@@ -95,10 +95,10 @@ export interface HyperAxisWasmBindings {
     reduceOnly: boolean,
     timeInForce: string,
     nonce: string,
-    vaultAddress?: null | string,
-    expiresAfter?: null | string,
     builderAddress?: null | string,
     builderFee?: null | number,
+    vaultAddress?: null | string,
+    expiresAfter?: null | string,
   ): string;
   prepare_cancel_json(requestJson: string): string;
   prepare_update_leverage_json(requestJson: string): string;

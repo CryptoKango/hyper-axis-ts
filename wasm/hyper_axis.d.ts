@@ -764,7 +764,7 @@ export function prepare_info_query_json(query_json: string): string;
  * Returns a JavaScript error for unsupported enum values, invalid integers,
  * precision violations, or serialization failures.
  */
-export function prepare_limit_order_json(network: string, asset: number, market_kind: string, sz_decimals: number, side: string, limit_price: string, order_size: string, reduce_only: boolean, time_in_force: string, nonce: string, vault_address?: string | null, expires_after?: string | null): string;
+export function prepare_limit_order_json(network: string, asset: number, market_kind: string, sz_decimals: number, side: string, limit_price: string, order_size: string, reduce_only: boolean, time_in_force: string, nonce: string, builder_address?: string | null, builder_fee?: number | null, vault_address?: string | null, expires_after?: string | null): string;
 
 /**
  * Produces the authorized-user digest for legacy agent abstraction.
@@ -1523,7 +1523,7 @@ export interface InitOutput {
     readonly prepare_evm_user_modify_json: (a: number, b: number) => [number, number, number, number];
     readonly prepare_gossip_priority_bid_json: (a: number, b: number) => [number, number, number, number];
     readonly prepare_info_query_json: (a: number, b: number) => [number, number, number, number];
-    readonly prepare_limit_order_json: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number) => [number, number, number, number];
+    readonly prepare_limit_order_json: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number, r: number, s: number, t: number, u: number, v: number, w: number, x: number) => [number, number, number, number];
     readonly prepare_multi_sig_agent_enable_dex_abstraction_payload_json: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly prepare_multi_sig_agent_set_abstraction_payload_json: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly prepare_multi_sig_approve_agent_payload_json: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];

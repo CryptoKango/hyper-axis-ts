@@ -19,7 +19,7 @@ describe('HyperAxisClient initialization', () => {
     ]);
 
     expect(first).toBe(second);
-    expect(first.protocolVersion).toBe('0.3.2');
+    expect(first.protocolVersion).toBe('0.3.3');
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
@@ -104,10 +104,10 @@ describe('HyperAxisClient order flow', () => {
       false,
       'Gtc',
       '1700000000000',
-      null,
-      null,
       '0x0000000000000000000000000000000000000002',
       100,
+      null,
+      null,
     );
   });
 

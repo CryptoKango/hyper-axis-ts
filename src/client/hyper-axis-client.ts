@@ -199,10 +199,10 @@ export class HyperAxisClient {
           request.reduceOnly ?? false,
           request.timeInForce ?? "Gtc",
           request.nonce,
-          request.vaultAddress ?? null,
-          request.expiresAfter ?? null,
           request.builder?.address ?? null,
           request.builder?.fee ?? null,
+          request.vaultAddress ?? null,
+          request.expiresAfter ?? null,
         ),
       ),
     );

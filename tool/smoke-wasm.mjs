@@ -14,7 +14,7 @@ const loader = createHyperAxisWasmLoader({
 });
 const client = await HyperAxisClient.initialize(loader);
 
-if (client.protocolVersion !== '0.3.2') {
+if (client.protocolVersion !== '0.3.3') {
   throw new Error(`Unexpected protocol version: ${client.protocolVersion}`);
 }
 if (client.normalizeDecimal('001.2300') !== '1.23') {
