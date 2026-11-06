@@ -19,7 +19,7 @@ describe('HyperAxisClient initialization', () => {
     ]);
 
     expect(first).toBe(second);
-    expect(first.protocolVersion).toBe('0.3.3');
+    expect(first.protocolVersion).toBe('0.3.4');
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
@@ -351,12 +351,10 @@ describe('HyperAxisClient runtime and transport', () => {
   });
 
   it('passes HIP-3 dex scope and validates typed RWA responses in Rust', async () => {
-    const prepare = vi.fn(() =>
-      JSON.stringify({
-        queryType: 'metaAndAssetCtxs',
-        body: '{"type":"metaAndAssetCtxs","dex":"xyz"}',
-      }),
-    );
+    const prepare = vi.fn((queryJson: string) => {
+      const query = JSON.parse(queryJson) as { readonly type: string };
+      return JSON.stringify({ queryType: query.type, body: queryJson });
+    });
     const parse = vi.fn((body: string) => body);
     const client = await HyperAxisClient.initialize(() =>
       Promise.resolve(
@@ -376,6 +374,22 @@ describe('HyperAxisClient runtime and transport', () => {
     expect(prepared.body).toContain('"dex":"xyz"');
     expect(parse).toHaveBeenCalledOnce();
     expect(response).toEqual([{ universe: [] }, []]);
+
+    expect(
+      client.prepareInfoQuery({
+        type: 'activeAssetData',
+        user: '0x000000000000000000000000000000000000beef',
+        coin: 'BTC',
+      }).queryType,
+    ).toBe('activeAssetData');
+
+    expect(
+      client.prepareInfoQuery({
+        type: 'maxBuilderFee',
+        user: '0x000000000000000000000000000000000000beef',
+        builder: '0x000000000000000000000000000000000000cafe',
+      }).queryType,
+    ).toBe('maxBuilderFee');
   });
 
   it('validates host-side integer boundaries before invoking Rust', async () => {

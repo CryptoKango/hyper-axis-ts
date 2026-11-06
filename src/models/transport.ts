@@ -61,10 +61,11 @@ export type HyperAxisOrderStatusSelector =
   | { readonly kind: 'oid'; readonly oid: string };
 
 /**
- * Complete typed Info API request surface exposed by Rust Core v0.3.3.
+ * Complete typed Info API request surface exposed by Rust Core v0.3.4.
  * Wide integers are decimal strings and become JSON numbers only inside Rust.
  */
 export type HyperAxisInfoQuery =
+  | { readonly type: 'activeAssetData'; readonly user: string; readonly coin: string }
   | { readonly type: 'allMids'; readonly dex: string }
   | { readonly type: 'candleSnapshot'; readonly coin: string; readonly interval: HyperAxisCandleInterval; readonly startTime: string; readonly endTime: string }
   | { readonly type: 'clearinghouseState'; readonly user: string; readonly dex: string }
@@ -79,6 +80,7 @@ export type HyperAxisInfoQuery =
   | { readonly type: 'l2Book'; readonly coin: string; readonly nSigFigs?: number; readonly mantissa?: number }
   | { readonly type: 'meta'; readonly dex: string }
   | { readonly type: 'metaAndAssetCtxs'; readonly dex?: string }
+  | { readonly type: 'maxBuilderFee'; readonly user: string; readonly builder: string }
   | { readonly type: 'openOrders'; readonly user: string; readonly dex: string }
   | { readonly type: 'orderStatus'; readonly user: string; readonly selector: HyperAxisOrderStatusSelector }
   | { readonly type: 'perpDeployAuctionStatus' }
@@ -109,7 +111,7 @@ export interface HyperAxisPreparedInfoQuery {
   readonly body: string;
 }
 
-/** Complete WebSocket subscription surface exposed by Rust Core v0.3.3. */
+/** Complete WebSocket subscription surface exposed by Rust Core v0.3.4. */
 export type HyperAxisSubscription =
   | { readonly type: 'activeAssetCtx'; readonly coin: string }
   | { readonly type: 'activeAssetData'; readonly user: string; readonly coin: string }

@@ -1,6 +1,6 @@
 {
   "name": "@cryptokango/hyper-axis",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "TypeScript SDK for the HyperAxis Rust WebAssembly core",
   "type": "module",
   "sideEffects": false,
